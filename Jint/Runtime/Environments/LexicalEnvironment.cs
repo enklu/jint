@@ -1,4 +1,5 @@
-﻿using Jint.Native;
+﻿using CreateAR.EnkluPlayer.DataStructures;
+using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.References;
 
@@ -9,25 +10,15 @@ namespace Jint.Runtime.Environments
     /// http://www.ecma-international.org/ecma-262/5.1/#sec-10.2
     /// http://www.ecma-international.org/ecma-262/5.1/#sec-10.2.2
     /// </summary>
-    public sealed class LexicalEnvironment
+    public sealed class LexicalEnvironment : IOptimizedObjectPoolElement
     {
-        private readonly EnvironmentRecord _record;
-        private readonly LexicalEnvironment _outer;
+        public EnvironmentRecord Record { get; private set; }
+        public LexicalEnvironment Outer { get; private set; }
 
-        public LexicalEnvironment(EnvironmentRecord record, LexicalEnvironment outer)
+        public void Setup(EnvironmentRecord record, LexicalEnvironment outer)
         {
-            _record = record;
-            _outer = outer;
-        }
-
-        public EnvironmentRecord Record
-        {
-            get { return _record; }
-        }
-
-        public LexicalEnvironment Outer
-        {
-            get { return _outer; }
+            Record = record;
+            Outer = outer;
         }
 
         public static Reference GetIdentifierReference(LexicalEnvironment lex, string name, bool strict)
@@ -52,13 +43,14 @@ namespace Jint.Runtime.Environments
 
         public static LexicalEnvironment NewDeclarativeEnvironment(Engine engine, LexicalEnvironment outer = null)
         {
-            return new LexicalEnvironment(new DeclarativeEnvironmentRecord(engine), outer);
-        }
+            var env = new LexicalEnvironment();
+            env.Setup(new DeclarativeEnvironmentRecord(engine), outer);
 
-        public static LexicalEnvironment NewObjectEnvironment(Engine engine, ObjectInstance objectInstance, LexicalEnvironment outer, bool provideThis)
-        {
-            return new LexicalEnvironment(new ObjectEnvironmentRecord(engine, objectInstance, provideThis), outer);
+            return env;
         }
+        
+        public int Index { get; set; }
+        public bool Available { get; set; }
     }
 
     

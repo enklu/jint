@@ -100,14 +100,15 @@ namespace Jint.Runtime.Interop
             }
 
             // search in loaded assemblies
-#if NETSTANDARD1_3
+#if NETFX_CORE  || NETSTANDARD1_3
             var lookupAssemblies = new[] { typeof(NamespaceReference).GetTypeInfo().Assembly };
 #else
             var lookupAssemblies = new[] { Assembly.GetCallingAssembly(), Assembly.GetExecutingAssembly() };
 #endif
 
-            foreach (var assembly in lookupAssemblies)
+            for (int i = 0, len = lookupAssemblies.Length; i < len; i++)
             {
+                var assembly = lookupAssemblies[i];
                 type = assembly.GetType(path);
                 if (type != null)
                 {
@@ -117,8 +118,9 @@ namespace Jint.Runtime.Interop
             }
 
             // search in lookup assemblies
-            foreach (var assembly in Engine.Options._LookupAssemblies)
+            for (int i = 0, len = Engine.Options._LookupAssemblies.Count; i < len; i++)
             {
+                var assembly = Engine.Options._LookupAssemblies[i];
                 type = assembly.GetType(path);
                 if (type != null)
                 {
@@ -130,14 +132,14 @@ namespace Jint.Runtime.Interop
                 var trimPath = path.Substring(0, lastPeriodPos);
                 type = GetType(assembly, trimPath);
                 if (type != null)
-                  foreach (Type nType in GetAllNestedTypes(type))
-                  {
-                    if (nType.FullName.Replace("+", ".").Equals(path.Replace("+", ".")))
+                    foreach (Type nType in GetAllNestedTypes(type))
                     {
-                      Engine.TypeCache.Add(path.Replace("+", "."), nType);
-                      return TypeReference.CreateTypeReference(Engine, nType);
+                        if (nType.FullName.Replace("+", ".").Equals(path.Replace("+", ".")))
+                        {
+                            Engine.TypeCache.Add(path.Replace("+", "."), nType);
+                            return TypeReference.CreateTypeReference(Engine, nType);
+                        }
                     }
-                  }
             }
 
             // the new path doesn't represent a known class, thus return a new namespace instance
@@ -156,13 +158,15 @@ namespace Jint.Runtime.Interop
         private static Type GetType(Assembly assembly, string typeName)
         {
             Type[] types = assembly.GetTypes();
-            foreach (Type t in types)
+            for (int i = 0, len = types.Length; i < len; i++)
             {
+                Type t = types[i];
                 if (t.FullName.Replace("+", ".") == typeName.Replace("+", "."))
                 {
                     return t;
                 }
             }
+
             return null;
         }
 
@@ -175,12 +179,13 @@ namespace Jint.Runtime.Interop
 
         private static void AddNestedTypesRecursively(List<Type> types, Type type)
         {
-          Type[] nestedTypes = type.GetNestedTypes(BindingFlags.Public);
-          foreach (Type nestedType in nestedTypes)
-          {
-            types.Add(nestedType);
-            AddNestedTypesRecursively(types, nestedType);
-          }
+            Type[] nestedTypes = type.GetNestedTypes(BindingFlags.Public);
+            for (int i = 0, len = nestedTypes.Length; i < len; i++)
+            {
+                Type nestedType = nestedTypes[i];
+                types.Add(nestedType);
+                AddNestedTypesRecursively(types, nestedType);
+            }
         }
 
       public override PropertyDescriptor GetOwnProperty(string propertyName)

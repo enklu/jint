@@ -296,8 +296,9 @@ namespace Jint.Native
                 return Null;
             }
 
-            foreach (var converter in engine.Options._ObjectConverters)
+            for (int index = 0, len = engine.Options._ObjectConverters.Count; index < len; index++)
             {
+                var converter = engine.Options._ObjectConverters[index];
                 JsValue result;
                 if (converter.TryConvert(value, out result))
                 {
@@ -372,6 +373,15 @@ namespace Jint.Native
 
             // if no known type could be guessed, wrap it as an ObjectInstance
             return new ObjectWrapper(engine, value);
+        }
+
+        /// <summary>
+        /// Converts a <see cref="JsValue"/> to its underlying CLR value.
+        /// </summary>
+        /// <returns>The underlying CLR value of the <see cref="JsValue"/> instance.</returns>
+        public T To<T>()
+        {
+            return (T) ToObject();
         }
 
         /// <summary>
@@ -481,20 +491,18 @@ namespace Jint.Native
 
                         case "Arguments":
                         case "Object":
-#if __IOS__
-                                IDictionary<string, object> o = new Dictionary<string, object>();
-#else
+                            // FIXME: Use and Expando Object for non-mobile?
+                            //IDictionary<string, object> o = new Dictionary<string, object>();
                             IDictionary<string, object> o = new ExpandoObject();
-#endif
 
-                            foreach (var p in (_object as ObjectInstance).GetOwnProperties())
+                            foreach (var p in ((ObjectInstance) _object).GetOwnProperties())
                             {
                                 if (!p.Value.Enumerable.HasValue || p.Value.Enumerable.Value == false)
                                 {
                                     continue;
                                 }
 
-                                o.Add(p.Key, (_object as ObjectInstance).Get(p.Key).ToObject());
+                                o.Add(p.Key, ((ObjectInstance) _object).Get(p.Key).ToObject());
                             }
 
                             return o;

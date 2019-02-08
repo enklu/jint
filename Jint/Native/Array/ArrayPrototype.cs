@@ -549,7 +549,7 @@ namespace Jint.Native.Array
                 throw e.InnerException;
             }
 
-            foreach (var i in Enumerable.Range(0, lenVal))
+            for (var i = 0; i < lenVal; i++)
             {
                 obj.Put(i.ToString(), array[i], false);
             }
@@ -775,12 +775,13 @@ namespace Jint.Native.Array
             var items = new List<JsValue> {o};
             items.AddRange(arguments);
 
-            foreach (var e in items)
+            for (int i = 0, ilen = items.Count; i < ilen; i++)
             {
+                var e = items[i];
                 var eArray = e.TryCast<ArrayInstance>();
                 if (eArray != null)
                 {
-                    var len =  TypeConverter.ToUint32(eArray.Get("length"));
+                    var len = TypeConverter.ToUint32(eArray.Get("length"));
                     for (var k = 0; k < len; k++)
                     {
                         var p = k.ToString();
@@ -788,14 +789,16 @@ namespace Jint.Native.Array
                         if (exists)
                         {
                             var subElement = eArray.Get(p);
-                            a.DefineOwnProperty(TypeConverter.ToString(n), new PropertyDescriptor(subElement, true, true, true), false);
+                            a.DefineOwnProperty(TypeConverter.ToString(n),
+                                new PropertyDescriptor(subElement, true, true, true), false);
                         }
+
                         n++;
                     }
                 }
                 else
                 {
-                    a.DefineOwnProperty(TypeConverter.ToString(n), new PropertyDescriptor(e, true, true, true ), false);
+                    a.DefineOwnProperty(TypeConverter.ToString(n), new PropertyDescriptor(e, true, true, true), false);
                     n++;
                 }
             }
@@ -887,8 +890,9 @@ namespace Jint.Native.Array
 
             // cast to double as we need to prevent an overflow
             double n = TypeConverter.ToUint32(lenVal);
-            foreach (JsValue e in arguments)
+            for (int i = 0, len = arguments.Length; i < len; i++)
             {
+                JsValue e = arguments[i];
                 o.Put(TypeConverter.ToString(n), e, true);
                 n++;
             }

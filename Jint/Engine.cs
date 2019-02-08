@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using CreateAR.EnkluPlayer.DataStructures;
 using Jint.Native;
 using Jint.Native.Argument;
 using Jint.Native.Array;
@@ -65,6 +66,13 @@ namespace Jint
         };
 
         internal JintCallStack CallStack = new JintCallStack();
+
+        public static readonly OptimizedObjectPool<StrictModeScope> PoolStrictMode = new OptimizedObjectPool<StrictModeScope>(12, () => new StrictModeScope());
+        public static readonly OptimizedObjectPool<LexicalEnvironment> PoolLexicalEnvironments = new OptimizedObjectPool<LexicalEnvironment>(12, () => new LexicalEnvironment());
+
+        private static readonly OptimizedObjectPool<ExecutionContext> _poolExecutionContext = new OptimizedObjectPool<ExecutionContext>(12, () => new ExecutionContext());
+
+        public event Action<Engine> OnDestroy;
 
         public Engine() : this(null)
         {
@@ -132,7 +140,8 @@ namespace Jint
             Error.PrototypeObject.Configure();
 
             // create the global environment http://www.ecma-international.org/ecma-262/5.1/#sec-10.2.3
-            GlobalEnvironment = LexicalEnvironment.NewObjectEnvironment(this, Global, null, false);
+            GlobalEnvironment = PoolLexicalEnvironments.Get();
+            GlobalEnvironment.Setup(new ObjectEnvironmentRecord(this, Global, false), null);
 
             // create the global execution context http://www.ecma-international.org/ecma-262/5.1/#sec-10.4.1.1
             EnterExecutionContext(GlobalEnvironment, GlobalEnvironment, Global);
@@ -162,6 +171,16 @@ namespace Jint
             ClrTypeConverter = new DefaultTypeConverter(this);
             BreakPoints = new List<BreakPoint>();
             DebugHandler = new DebugHandler(this);
+        }
+
+        public void Destroy()
+        {
+            PoolLexicalEnvironments.Put(GlobalEnvironment);
+
+            if (null != OnDestroy)
+            {
+                OnDestroy(this);
+            }
         }
 
         public LexicalEnvironment GlobalEnvironment;
@@ -220,15 +239,14 @@ namespace Jint
 
         public ExecutionContext EnterExecutionContext(LexicalEnvironment lexicalEnvironment, LexicalEnvironment variableEnvironment, JsValue thisBinding)
         {
-            var executionContext = new ExecutionContext
-                {
-                    LexicalEnvironment = lexicalEnvironment,
-                    VariableEnvironment = variableEnvironment,
-                    ThisBinding = thisBinding
-                };
-            _executionContexts.Push(executionContext);
+            var context = _poolExecutionContext.Get();
+            context.LexicalEnvironment = lexicalEnvironment;
+            context.VariableEnvironment = variableEnvironment;
+            context.ThisBinding = thisBinding;
+        
+            _executionContexts.Push(context);
 
-            return executionContext;
+            return context;
         }
 
         public Engine SetValue(string name, Delegate value)
@@ -265,7 +283,11 @@ namespace Jint
 
         public void LeaveExecutionContext()
         {
-            _executionContexts.Pop();
+            var context = _executionContexts.Pop();
+            if (null != context)
+            {
+                _poolExecutionContext.Put(context);
+            }
         }
 
         /// <summary>
@@ -309,19 +331,27 @@ namespace Jint
             ResetLastStatement();
             ResetCallStack();
 
-            using (new StrictModeScope(Options._IsStrict || program.Strict))
+            var scope = PoolStrictMode.Get();
+            scope.Setup(Options._IsStrict || program.Strict);
+            
+            DeclarationBindingInstantiation(DeclarationBindingType.GlobalCode, program.FunctionDeclarations, program.VariableDeclarations, null, null);
+
+            var result = _statements.ExecuteProgram(program);
+            if (result.Type == Completion.Throw)
             {
-                DeclarationBindingInstantiation(DeclarationBindingType.GlobalCode, program.FunctionDeclarations, program.VariableDeclarations, null, null);
+                var exception = new JavaScriptException(result.GetValueOrDefault())
+                    .SetCallstack(this, result.Location);
 
-                var result = _statements.ExecuteProgram(program);
-                if (result.Type == Completion.Throw)
-                {
-                    throw new JavaScriptException(result.GetValueOrDefault())
-                        .SetCallstack(this, result.Location);
-                }
+                scope.Teardown();
+                PoolStrictMode.Put(scope);
 
-                _completionValue = result.GetValueOrDefault();
+                throw exception;
             }
+
+            _completionValue = result.GetValueOrDefault();
+
+            scope.Teardown();
+            PoolStrictMode.Put(scope);
 
             return this;
         }
@@ -489,6 +519,16 @@ namespace Jint
         }
 
         /// <summary>
+        /// Retrieves an ICallable.
+        /// </summary>
+        /// <param name="functionName"></param>
+        /// <returns></returns>
+        public ICallable GetFunction(string functionName)
+        {
+            return GetValue(functionName).TryCast<ICallable>();
+        }
+
+        /// <summary>
         /// http://www.ecma-international.org/ecma-262/5.1/#sec-8.7.1
         /// </summary>
         /// <param name="value"></param>
@@ -511,8 +551,9 @@ namespace Jint
 
             if (reference.IsUnresolvableReference())
             {
+                JsValue val;
                 if (Options._ReferenceResolver != null &&
-                    Options._ReferenceResolver.TryUnresolvableReference(this, reference, out JsValue val))
+                    Options._ReferenceResolver.TryUnresolvableReference(this, reference, out val))
                 {
                     return val;
                 }
@@ -760,8 +801,10 @@ namespace Jint
             {
                 var argCount = arguments.Length;
                 var n = 0;
-                foreach (var argName in functionInstance.FormalParameters)
+                for (int i = 0, len = functionInstance.FormalParameters.Length; i < len; i++)
                 {
+                    var argName = functionInstance.FormalParameters[i];
+
                     n++;
                     var v = n > argCount ? Undefined.Instance : arguments[n - 1];
                     var argAlreadyDeclared = env.HasBinding(argName);
@@ -774,8 +817,9 @@ namespace Jint
                 }
             }
 
-            foreach (var f in functionDeclarations)
+            for (int i = 0, len = functionDeclarations.Count; i < len; i++)
             {
+                var f = functionDeclarations[i];
                 var fn = f.Id.Name;
                 var fo = Function.CreateFunctionObject(f);
                 var funcAlreadyDeclared = env.HasBinding(fn);
@@ -792,12 +836,12 @@ namespace Jint
                         if (existingProp.Configurable.Value)
                         {
                             go.DefineOwnProperty(fn,
-                                                 new PropertyDescriptor(
-                                                     value: Undefined.Instance,
-                                                     writable: true,
-                                                     enumerable: true,
-                                                     configurable: configurableBindings
-                                                     ), true);
+                                new PropertyDescriptor(
+                                    value: Undefined.Instance,
+                                    writable: true,
+                                    enumerable: true,
+                                    configurable: configurableBindings
+                                ), true);
                         }
                         else
                         {
@@ -838,14 +882,19 @@ namespace Jint
             }
 
             // process all variable declarations in the current parser scope
-            foreach (var d in variableDeclarations.SelectMany(x => x.Declarations))
+            for (int i = 0, ilen = variableDeclarations.Count; i < ilen; i++)
             {
-                var dn = d.Id.Name;
-                var varAlreadyDeclared = env.HasBinding(dn);
-                if (!varAlreadyDeclared)
+                var varDeclations = variableDeclarations[i];
+                for (int j = 0, jlen = varDeclations.Declarations.Count; j < jlen; j++)
                 {
-                    env.CreateMutableBinding(dn, configurableBindings);
-                    env.SetMutableBinding(dn, Undefined.Instance, strict);
+                    var d = varDeclations.Declarations[j];
+                    var dn = d.Id.Name;
+                    var varAlreadyDeclared = env.HasBinding(dn);
+                    if (!varAlreadyDeclared)
+                    {
+                        env.CreateMutableBinding(dn, configurableBindings);
+                        env.SetMutableBinding(dn, Undefined.Instance, strict);
+                    }
                 }
             }
         }

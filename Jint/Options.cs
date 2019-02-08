@@ -152,33 +152,74 @@ namespace Jint
             return this;
         }
 
-        internal bool _IsGlobalDiscarded => _discardGlobal;
+        internal bool _IsGlobalDiscarded
+        {
+            get { return _discardGlobal; }
+        }
 
-        internal bool _IsStrict => _strict;
+        internal bool _IsStrict
+        {
+            get { return _strict; }
+        }
 
-        internal bool _IsDebuggerStatementAllowed => _allowDebuggerStatement;
+        internal bool _IsDebuggerStatementAllowed
+        {
+            get { return _allowDebuggerStatement; }
+        }
 
-        internal bool _IsDebugMode => _debugMode;
+        internal bool _IsDebugMode
+        {
+            get { return _debugMode; }
+        }
 
-        internal bool _IsClrAllowed => _allowClr;
+        internal bool _IsClrAllowed
+        {
+            get { return _allowClr; }
+        }
 
-        internal Predicate<Exception> _ClrExceptionsHandler => _clrExceptionsHandler;
+        internal Predicate<Exception> _ClrExceptionsHandler
+        {
+            get { return _clrExceptionsHandler; }
+        }
 
-        internal IList<Assembly> _LookupAssemblies => _lookupAssemblies;
+        internal IList<Assembly> _LookupAssemblies
+        {
+            get { return _lookupAssemblies; }
+        }
 
-        internal IEnumerable<IObjectConverter> _ObjectConverters => _objectConverters;
+        internal List<IObjectConverter> _ObjectConverters
+        {
+            get { return _objectConverters; }
+        }
 
-        internal int _MaxStatements => _maxStatements;
+        internal int _MaxStatements
+        {
+            get { return _maxStatements; }
+        }
 
-        internal int _MaxRecursionDepth => _maxRecursionDepth;
+        internal int _MaxRecursionDepth
+        {
+            get { return _maxRecursionDepth; }
+        }
 
-        internal TimeSpan _TimeoutInterval => _timeoutInterval;
+        internal TimeSpan _TimeoutInterval
+        {
+            get { return _timeoutInterval; }
+        }
 
-        internal CultureInfo _Culture => _culture;
+        internal CultureInfo _Culture
+        {
+            get { return _culture; }
+        }
 
-        internal TimeZoneInfo _LocalTimeZone => _localTimeZone;
+        internal TimeZoneInfo _LocalTimeZone
+        {
+            get { return _localTimeZone; }
+        }
 
-        internal IReferenceResolver  _ReferenceResolver => _referenceResolver;
-
+        internal IReferenceResolver  _ReferenceResolver
+        {
+            get { return _referenceResolver; }
+        }
     }
 }

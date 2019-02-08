@@ -1,17 +1,18 @@
 ﻿using System;
+using CreateAR.EnkluPlayer.DataStructures;
 
 namespace Jint
 {
-    public class StrictModeScope : IDisposable
+    public class StrictModeScope : IOptimizedObjectPoolElement
     {
-        private readonly bool _strict;
-        private readonly bool _force;
-        private readonly int _forcedRefCount;
+        private bool _strict;
+        private bool _force;
+        private int _forcedRefCount;
 
         [ThreadStatic] 
         private static int _refCount;
-
-        public StrictModeScope(bool strict = true, bool force = false)
+        
+        public void Setup(bool strict = true, bool force = false)
         {
             _strict = strict;
             _force = force;
@@ -26,10 +27,9 @@ namespace Jint
             {
                 _refCount++;
             }
-
         }
 
-        public void Dispose()
+        public void Teardown()
         {
             if (_strict)
             {
@@ -58,5 +58,8 @@ namespace Jint
                 _refCount = value;
             }
         }
+
+        public int Index { get; set; }
+        public bool Available { get; set; }
     }
 }

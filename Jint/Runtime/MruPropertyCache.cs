@@ -7,10 +7,8 @@ namespace Jint.Runtime
     {
         private IDictionary<TKey, TValue> _dictionary = new Dictionary<TKey, TValue>();
         private LinkedList<KeyValuePair<TKey, TValue>> _list;
-        private uint _length;
 
         public MruPropertyCache(uint length) {
-            _length = length;
             _list = new LinkedList<KeyValuePair<TKey, TValue>>();
             for(int i=0; i<length; i++) {
                 _list.AddLast(new KeyValuePair<TKey, TValue>(default(TKey), default(TValue)));

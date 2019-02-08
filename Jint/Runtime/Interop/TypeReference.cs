@@ -56,8 +56,9 @@ namespace Jint.Runtime.Interop
 
             var methods = TypeConverter.FindBestMatch(Engine, constructors, arguments).ToList();
 
-            foreach (var method in methods)
+            for (int index = 0, indexLen = methods.Count; index < indexLen; index++)
             {
+                var method = methods[index];
                 var parameters = new object[arguments.Length];
                 try
                 {
@@ -78,7 +79,7 @@ namespace Jint.Runtime.Interop
                         }
                     }
 
-                    var constructor = (ConstructorInfo)method;
+                    var constructor = (ConstructorInfo) method;
                     var instance = constructor.Invoke(parameters.ToArray());
                     var result = TypeConverter.ToObject(Engine, JsValue.FromObject(Engine, instance));
 

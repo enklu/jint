@@ -324,9 +324,10 @@ namespace Jint.Native.String
 
                 if (sep == string.Empty || (rx != null && rx.Source == regExpForMatchingAllCharactere)) // for s.split(new RegExp)
                 {
-                    foreach (var c in s)
+                    for (int index = 0, indexLen = s.Length; index < indexLen; index++)
                     {
-                        segments.Add(c.ToString());    
+                        var c = s[index];
+                        segments.Add(c.ToString());
                     }
                 }
                 else

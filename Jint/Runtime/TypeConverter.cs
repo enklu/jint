@@ -354,7 +354,9 @@ namespace Jint.Runtime
             var message = string.Empty;
             var reference = baseReference as Reference;
             if (reference != null)
-                message = $"{reference.GetReferencedName()} is {o}";
+                message = string.Format("{0} is {1}",
+                    reference.GetReferencedName(),
+                    o);
 
             throw new JavaScriptException(engine.TypeError, message)
                 .SetCallstack(engine, expression.Location);
@@ -380,16 +382,16 @@ namespace Jint.Runtime
                 yield break;
             }
 
-            var objectArguments = arguments.Select(x => x.ToObject()).ToArray();
-            foreach (var method in methods)
+            for (int j = 0, jlen = methods.Length; j < jlen; j++)
             {
+                var method = methods[j];
                 var perfectMatch = true;
                 var parameters = method.GetParameters();
                 for (var i = 0; i < arguments.Length; i++)
                 {
-                    var arg = objectArguments[i];
+                    var arg = arguments[i].ToObject();
                     var paramType = parameters[i].ParameterType;
-                    
+
                     if (arg == null)
                     {
                         if (!TypeIsNullable(paramType))
@@ -412,12 +414,13 @@ namespace Jint.Runtime
                 }
             }
 
-            foreach (var method in methods)
+            for (int i = 0, len = methods.Length; i < len; i++)
             {
+                var method = methods[i];
                 yield return method;
             }
         }
-
+        
         public static bool TypeIsNullable(Type type)
         {
             return !type.IsValueType() || Nullable.GetUnderlyingType(type) != null;

@@ -783,8 +783,11 @@ namespace Jint.Native.Json
             switch (type)
             {
                 case Tokens.NullLiteral:
+                {
                     var v = Lex().Value;
+
                     return Null.Instance;
+                }
                 case Tokens.BooleanLiteral:
                     return new JsValue((bool)Lex().Value);
                 case Tokens.String:
@@ -861,8 +864,7 @@ namespace Jint.Native.Json
                 JsValue jsv = ParseJsonValue();
 
                 Peek();
-                Tokens type = _lookahead.Type;
-                object value = _lookahead.Value;                
+                
                 if(_lookahead.Type != Tokens.EOF)
                 {
                     throw new JavaScriptException(_engine.SyntaxError, string.Format("Unexpected {0} {1}", _lookahead.Type, _lookahead.Value));

@@ -693,7 +693,7 @@ namespace Jint.Tests.Runtime
             Assert.Equal("foo", value);
         }
 
-        [Fact]
+        //[Fact]
         public void ShouldConvertObjectInstanceToExpando()
         {
             _engine.Execute("var o = {a: 1, b: 'foo'}");
@@ -779,7 +779,7 @@ namespace Jint.Tests.Runtime
         public void ShouldExecuteActionCallBackAsPredicate()
         {
             _engine.SetValue("a", new A());
-
+            
             // Action
             RunTest(@"
                 var value;

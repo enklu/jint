@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace CreateAR.EnkluPlayer.DataStructures
+namespace Jint.Runtime.Memory
 {
     /// <summary>
     /// Describes an element that can be in an <c>OptimizedObjectPool</c>.

@@ -5,9 +5,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using Jint.Native;
-using CreateAR.EnkluPlayer.Scripting;
 using Jint.Native.Array;
 using Jint.Native.Function;
+using Jint.Runtime;
 
 namespace Jint.Runtime.Interop
 {

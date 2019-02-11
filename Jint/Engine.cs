@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using CreateAR.EnkluPlayer.DataStructures;
 using Jint.Native;
 using Jint.Native.Argument;
 using Jint.Native.Array;
@@ -25,6 +24,7 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Environments;
 using Jint.Runtime.Interop;
 using Jint.Runtime.References;
+using Jint.Runtime.Memory;
 
 namespace Jint
 {

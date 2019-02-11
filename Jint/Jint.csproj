@@ -21,4 +21,7 @@
   </ItemGroup>
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="CreateAR\" />
+  </ItemGroup>
 </Project>

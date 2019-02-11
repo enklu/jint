@@ -1,6 +1,5 @@
-﻿using CreateAR.EnkluPlayer.DataStructures;
-using Jint.Native;
-using Jint.Native.Object;
+﻿using Jint.Native;
+using Jint.Runtime.Memory;
 using Jint.Runtime.References;
 
 namespace Jint.Runtime.Environments

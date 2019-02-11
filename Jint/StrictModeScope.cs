@@ -1,5 +1,5 @@
 ﻿using System;
-using CreateAR.EnkluPlayer.DataStructures;
+using Jint.Runtime.Memory;
 
 namespace Jint
 {

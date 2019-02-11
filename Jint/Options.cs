@@ -19,7 +19,7 @@ namespace Jint
         private int _maxRecursionDepth = -1; 
         private TimeSpan _timeoutInterval;
         private CultureInfo _culture = CultureInfo.CurrentCulture;
-        private TimeZoneInfo _localTimeZone = TimeZoneInfo.Local;
+        private TimeZoneInfo _localTimeZone = TimeZoneInfo.Utc;
         private List<Assembly> _lookupAssemblies = new List<Assembly>();
         private Predicate<Exception> _clrExceptionsHandler;
         private IReferenceResolver _referenceResolver;

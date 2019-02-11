@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+#if !NET35
 using System.Diagnostics.Contracts;
 using System.Dynamic;
+#endif
 using System.Reflection;
 using System.Threading;
 using Jint.Native.Array;
@@ -18,6 +20,11 @@ using Jint.Runtime.Interop;
 
 namespace Jint.Native
 {
+#if NET35
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Method)]
+    public class PureAttribute : Attribute { }
+#endif
+
     [DebuggerTypeProxy(typeof(JsValueDebugView))]
     public class JsValue : IEquatable<JsValue>
     {
@@ -491,9 +498,11 @@ namespace Jint.Native
 
                         case "Arguments":
                         case "Object":
-                            // FIXME: Use and Expando Object for non-mobile?
-                            //IDictionary<string, object> o = new Dictionary<string, object>();
+#if NET35
+                            IDictionary<string, object> o = new Dictionary<string, object>();
+#else
                             IDictionary<string, object> o = new ExpandoObject();
+#endif
 
                             foreach (var p in ((ObjectInstance) _object).GetOwnProperties())
                             {

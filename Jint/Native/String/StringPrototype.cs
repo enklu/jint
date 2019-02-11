@@ -789,7 +789,7 @@ namespace Jint.Native.String
             targetLength = targetLength - s.Length;
             if (targetLength > padString.Length)
             {
-                padString = string.Join("", Enumerable.Repeat(padString, (targetLength / padString.Length) + 1));
+                padString = string.Join("", Enumerable.Repeat(padString, (targetLength / padString.Length) + 1).ToArray());
             }
 
             return padStart ? $"{padString.Substring(0, targetLength)}{s}" : $"{s}{padString.Substring(0, targetLength)}";

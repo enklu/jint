@@ -637,7 +637,6 @@ namespace Jint.Native.Global
         public JsValue Unescape(JsValue thisObject, JsValue[] arguments)
         {
             var uriString = TypeConverter.ToString(arguments.At(0));
-
             var strLen = uriString.Length;
             var r = new StringBuilder(strLen);
             for (var k = 0; k < strLen; k++)
@@ -650,7 +649,9 @@ namespace Jint.Native.Global
                         && uriString.Skip(k + 2).Take(4).All(IsValidHexaChar))
                     {
                         c = (char)int.Parse(
-                            string.Join(string.Empty, uriString.Skip(k + 2).Take(4)),
+                            k + 6 < uriString.Length 
+                                ? uriString.Substring(k + 2, 4)
+                                : uriString.Substring(k + 2),
                             NumberStyles.AllowHexSpecifier);
 
                         k += 5;
@@ -659,7 +660,9 @@ namespace Jint.Native.Global
                         && uriString.Skip(k + 1).Take(2).All(IsValidHexaChar))
                     {
                         c = (char)int.Parse(
-                            string.Join(string.Empty, uriString.Skip(k + 1).Take(2)),
+                            k + 3 < uriString.Length 
+                                ? uriString.Substring(k + 1, 2)
+                                : uriString.Substring(k + 1),
                             NumberStyles.AllowHexSpecifier);
 
                         k += 2;

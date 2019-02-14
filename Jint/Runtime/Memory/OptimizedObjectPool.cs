@@ -94,10 +94,9 @@ namespace Jint.Runtime.Memory
         }
 
         /// <inheritdoc />
-        public OptimizedObjectPool(int min, Func<T> factory) : this(min, 0, 4, factory)
-        {
-            //
-        }
+        public OptimizedObjectPool(int min, Func<T> factory)
+            : this(min, 0, 4, factory)
+        { }
 
         /// <summary>
         /// Constructor.
@@ -150,6 +149,7 @@ namespace Jint.Runtime.Memory
             var index = _availableIndices.Dequeue();
             var instance = _allocated[index];
             instance.Available = false;
+
             return instance;
         }
 

@@ -18,7 +18,7 @@ namespace Jint.Tests.Ecma
             var assemblyDirectory = new FileInfo(assemblyPath).Directory;
 
 #if NET451
-            BasePath = assemblyDirectory.Parent.Parent.Parent.Parent.FullName;
+            BasePath = assemblyDirectory.Parent.Parent.Parent.FullName;
 #else
             BasePath = assemblyDirectory.Parent.Parent.Parent.FullName;
 #endif

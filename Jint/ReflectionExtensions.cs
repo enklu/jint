@@ -56,6 +56,11 @@ internal static class ReflectionExtensions
         return Attribute.IsDefined(member, typeof(T));
     }
 
+    internal static bool HasAttribute<T>(this MethodBase methodBase) where T : Attribute
+    {
+        return Attribute.IsDefined(methodBase, typeof(T), true);
+    }
+
     internal static MethodInfo GetMethodInfo(this Delegate d)
     {
         return d.Method;

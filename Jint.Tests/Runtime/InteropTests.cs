@@ -693,6 +693,7 @@ namespace Jint.Tests.Runtime
             Assert.Equal("foo", value);
         }
 
+        /*
         //[Fact]
         public void ShouldConvertObjectInstanceToExpando()
         {
@@ -710,6 +711,7 @@ namespace Jint.Tests.Runtime
             Assert.Equal("foo", dic["b"]);
 
         }
+        */
 
         [Fact]
         public void ShouldNotTryToConvertCompatibleTypes()

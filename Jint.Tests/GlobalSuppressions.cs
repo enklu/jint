@@ -10,4 +10,5 @@
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Assertions", "xUnit2000:Expected value should be first", Justification = "<Pending>", Scope = "module")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Assertions", "xUnit2007:Do not use typeof expression to check the type", Justification = "<Pending>", Scope = "module")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "xUnit1014:MemberData should use nameof operator for member name", Justification = "<Pending>", Scope = "module")]
+[assembly: Xunit.CollectionBehavior(DisableTestParallelization = true)]
 

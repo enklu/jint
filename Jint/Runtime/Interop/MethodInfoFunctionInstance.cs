@@ -8,6 +8,7 @@ using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Runtime;
+using Jint.Runtime.Memory;
 
 namespace Jint.Runtime.Interop
 {
@@ -15,7 +16,7 @@ namespace Jint.Runtime.Interop
     {
         private readonly Engine _engine;
         private readonly MethodInfo[] _methods;
-
+        
         public MethodInfoFunctionInstance(Engine engine, MethodInfo[] methods)
             : base(engine, null, null, false)
         {
@@ -49,8 +50,7 @@ namespace Jint.Runtime.Interop
             for (int q = 0, qlen = methods.Count; q < qlen; q++)
             {
                 var method = methods[q];
-                var attributes = method.GetCustomAttributes(typeof(DenyJsAccess), true);
-                if (0 != attributes.Count())
+                if (method.HasAttribute<DenyJsAccess>())
                 {
                     continue;
                 }
@@ -142,8 +142,7 @@ namespace Jint.Runtime.Interop
             for (int q = 0, qlen = methods.Count; q < qlen; q++)
             {
                 var method = methods[q];
-                var attributes = method.GetCustomAttributes(typeof(DenyJsAccess), true);
-                if (0 != attributes.Count())
+                if (method.HasAttribute<DenyJsAccess>())
                 {
                     continue;
                 }
@@ -221,6 +220,36 @@ namespace Jint.Runtime.Interop
         }
 
         /// <summary>
+        /// Returns true if any of the parameters has 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        private bool AnyHasAttribute<T>(ParameterInfo[] parameters) where T : Attribute
+        {
+            for (int i = 0; i < parameters.Length; ++i)
+            {
+                if (parameters[i].HasAttribute<T>())
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Creates a new JS array containing the provided js values.
+        /// </summary>
+        private JsValue NewJsArray(JsValue[] values)
+        {
+            var jsArray = Engine.Array.Construct(Arguments.Empty);
+            Engine.Array.PrototypeObject.Push(jsArray, values);
+
+            return new JsValue(jsArray);
+        }
+
+        /// <summary>
         /// Reduces a flat list of parameters to a params array
         /// </summary>
         private JsValue[] ProcessParamsArrays(JsValue[] jsArguments, MethodInfo[] methodInfos)
@@ -229,24 +258,27 @@ namespace Jint.Runtime.Interop
             {
                 var methodInfo = methodInfos[i];
                 var parameters = methodInfo.GetParameters();
-                if (!parameters.Any(p => p.HasAttribute<ParamArrayAttribute>()))
+                if (!AnyHasAttribute<ParamArrayAttribute>(parameters))
+                {
                     continue;
-
+                }
+                
                 var nonParamsArgumentsCount = parameters.Length - 1;
                 if (jsArguments.Length < nonParamsArgumentsCount)
+                {
                     continue;
+                }
 
-                var newArgumentsCollection = jsArguments.Take(nonParamsArgumentsCount).ToList();
-                var argsToTransform = jsArguments.Skip(nonParamsArgumentsCount).ToList();
-
-                if (argsToTransform.Count == 1 && argsToTransform.FirstOrDefault().IsArray())
+                var argsToTransform = jsArguments.Slice(nonParamsArgumentsCount);
+                if (argsToTransform.Length == 1 && argsToTransform[0].IsArray())
+                {
                     continue;
+                }
 
-                var jsArray = Engine.Array.Construct(Arguments.Empty);
-                Engine.Array.PrototypeObject.Push(jsArray, argsToTransform.ToArray());
+                var jsArray = NewJsArray(argsToTransform);
+                var result = jsArguments.SliceAppend(jsArray, 0, nonParamsArgumentsCount);
 
-                newArgumentsCollection.Add(new JsValue(jsArray));
-                return newArgumentsCollection.ToArray();
+                return result;
             }
 
             return jsArguments;

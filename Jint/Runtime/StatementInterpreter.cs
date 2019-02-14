@@ -326,7 +326,7 @@ namespace Jint.Runtime
             var val = _engine.EvaluateExpression(withStatement.Object);
             var obj = TypeConverter.ToObject(_engine, _engine.GetValue(val));
             var oldEnv = _engine.ExecutionContext.LexicalEnvironment;
-            var newEnv = Engine.PoolLexicalEnvironments.Get();
+            var newEnv = new LexicalEnvironment();
             newEnv.Setup(new ObjectEnvironmentRecord(_engine, obj, true), oldEnv);
             _engine.ExecutionContext.LexicalEnvironment = newEnv;
 
@@ -343,7 +343,6 @@ namespace Jint.Runtime
             finally
             {
                 _engine.ExecutionContext.LexicalEnvironment = oldEnv;
-                Engine.PoolLexicalEnvironments.Put(newEnv);
             }
 
             return c;

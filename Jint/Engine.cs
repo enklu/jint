@@ -67,10 +67,11 @@ namespace Jint
 
         internal JintCallStack CallStack = new JintCallStack();
 
-        public static readonly OptimizedObjectPool<StrictModeScope> PoolStrictMode = new OptimizedObjectPool<StrictModeScope>(12, () => new StrictModeScope());
-        public static readonly OptimizedObjectPool<LexicalEnvironment> PoolLexicalEnvironments = new OptimizedObjectPool<LexicalEnvironment>(12, () => new LexicalEnvironment());
+        public static readonly OptimizedObjectPool<StrictModeScope> PoolStrictMode = 
+            new OptimizedObjectPool<StrictModeScope>(12, () => new StrictModeScope());
 
-        private static readonly OptimizedObjectPool<ExecutionContext> _poolExecutionContext = new OptimizedObjectPool<ExecutionContext>(12, () => new ExecutionContext());
+        private static readonly OptimizedObjectPool<ExecutionContext> _poolExecutionContext = 
+            new OptimizedObjectPool<ExecutionContext>(12, () => new ExecutionContext());
 
         public event Action<Engine> OnDestroy;
 
@@ -140,7 +141,7 @@ namespace Jint
             Error.PrototypeObject.Configure();
 
             // create the global environment http://www.ecma-international.org/ecma-262/5.1/#sec-10.2.3
-            GlobalEnvironment = PoolLexicalEnvironments.Get();
+            GlobalEnvironment = new LexicalEnvironment(); 
             GlobalEnvironment.Setup(new ObjectEnvironmentRecord(this, Global, false), null);
 
             // create the global execution context http://www.ecma-international.org/ecma-262/5.1/#sec-10.4.1.1
@@ -175,7 +176,7 @@ namespace Jint
 
         public void Destroy()
         {
-            PoolLexicalEnvironments.Put(GlobalEnvironment);
+            //PoolLexicalEnvironments.Put(GlobalEnvironment);
 
             if (null != OnDestroy)
             {

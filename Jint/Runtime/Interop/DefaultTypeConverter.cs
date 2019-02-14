@@ -172,10 +172,10 @@ namespace Jint.Runtime.Interop
                         var method = type.GetMethod("Invoke");
                         var arguments = method.GetParameters();
 
-                        var @params = new ParameterExpression[arguments.Count()];
+                        var @params = new ParameterExpression[arguments.Length];
                         for (var i = 0; i < @params.Count(); i++)
                         {
-                            @params[i] = Expression.Parameter(typeof(object), arguments[i].Name);
+                            @params[i] = Expression.Parameter(arguments[i].ParameterType, arguments[i].Name);
                         }
 
                         var @vars = Expression.NewArrayInit(

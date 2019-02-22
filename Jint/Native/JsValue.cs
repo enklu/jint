@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-#if !NET35
-using System.Diagnostics.Contracts;
-using System.Dynamic;
-#endif
-using System.Reflection;
 using System.Threading;
 using Jint.Native.Array;
 using Jint.Native.Boolean;
@@ -20,11 +15,6 @@ using Jint.Runtime.Interop;
 
 namespace Jint.Native
 {
-#if NET35
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Method)]
-    public class PureAttribute : Attribute { }
-#endif
-
     [DebuggerTypeProxy(typeof(JsValueDebugView))]
     public class JsValue : IEquatable<JsValue>
     {
@@ -76,67 +66,67 @@ namespace Jint.Native
 
         private readonly Types _type;
 
-        [Pure]
+        // [Pure]
         public bool IsPrimitive()
         {
             return _type != Types.Object && _type != Types.None;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsUndefined()
         {
             return _type == Types.Undefined;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsArray()
         {
             return IsObject() && AsObject() is ArrayInstance;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsDate()
         {
             return IsObject() && AsObject() is DateInstance;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsRegExp()
         {
             return IsObject() && AsObject() is RegExpInstance;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsObject()
         {
             return _type == Types.Object;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsString()
         {
             return _type == Types.String;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsNumber()
         {
             return _type == Types.Number;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsBoolean()
         {
             return _type == Types.Boolean;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsNull()
         {
             return _type == Types.Null;
         }
 
-        [Pure]
+        // [Pure]
         public ObjectInstance AsObject()
         {
             if (_type != Types.Object)
@@ -147,7 +137,7 @@ namespace Jint.Native
             return _object as ObjectInstance;
         }
 
-        [Pure]
+        // [Pure]
         public ArrayInstance AsArray()
         {
             if (!IsArray())
@@ -158,7 +148,7 @@ namespace Jint.Native
             return _object as ArrayInstance;
         }
 
-        [Pure]
+        // [Pure]
         public DateInstance AsDate()
         {
             if (!IsDate())
@@ -169,7 +159,7 @@ namespace Jint.Native
             return _object as DateInstance;
         }
 
-        [Pure]
+        // [Pure]
         public RegExpInstance AsRegExp()
         {
             if (!IsRegExp())
@@ -180,7 +170,7 @@ namespace Jint.Native
             return _object as RegExpInstance;
         }
 
-        [Pure]
+        // [Pure]
         public T TryCast<T>(Action<JsValue> fail = null) where T : class
         {
             if (IsObject())
@@ -211,7 +201,7 @@ namespace Jint.Native
             return _object as T;
         }
 
-        [Pure]
+        // [Pure]
         public bool AsBoolean()
         {
             if (_type != Types.Boolean)
@@ -222,7 +212,7 @@ namespace Jint.Native
             return _double != 0;
         }
 
-        [Pure]
+        // [Pure]
         public string AsString()
         {
             if (_type != Types.String)
@@ -238,7 +228,7 @@ namespace Jint.Native
             return _object as string;
         }
 
-        [Pure]
+        // [Pure]
         public double AsNumber()
         {
             if (_type != Types.Number)
@@ -329,10 +319,10 @@ namespace Jint.Native
             {
                 // Learn conversion.
                 // Learn conversion, racy, worst case we'll try again later
-                Interlocked.CompareExchange(ref Engine.TypeMappers, new Dictionary<Type, Func<Engine, object, JsValue>>(typeMappers)
-                {
-                    [valueType] = (Engine e, object v) => new JsValue((ObjectInstance)v)
-                }, typeMappers);
+                var newTypeMap = new Dictionary<Type, Func<Engine, object, JsValue>>(typeMappers);
+                newTypeMap[valueType] = (Engine e, object v) => new JsValue((ObjectInstance) v);
+                Interlocked.CompareExchange(ref Engine.TypeMappers, newTypeMap, typeMappers);
+
                 return new JsValue(instance);
             }
 
@@ -360,10 +350,10 @@ namespace Jint.Native
                     return jsArray;
                 };
                 // racy, we don't care, worst case we'll catch up later
-                Interlocked.CompareExchange(ref Engine.TypeMappers, new Dictionary<Type, Func<Engine, object, JsValue>>(typeMappers)
-                {
-                    [valueType] = convert
-                }, typeMappers);
+                var typeMap = new Dictionary<Type, Func<Engine, object, JsValue>>(typeMappers);
+                typeMap[valueType] = convert;
+                Interlocked.CompareExchange(ref Engine.TypeMappers, typeMap, typeMappers);
+
                 return convert(engine, a);
             }
 
@@ -498,7 +488,7 @@ namespace Jint.Native
 
                         case "Arguments":
                         case "Object":
-#if NET35
+#if !NETFX_CORE
                             IDictionary<string, object> o = new Dictionary<string, object>();
 #else
                             IDictionary<string, object> o = new ExpandoObject();

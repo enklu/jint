@@ -88,7 +88,7 @@ namespace Jint.Runtime.Interop
                         }
                         var @vars = Expression.NewArrayInit(typeof(JsValue), tmpVars);
 
-#if NET35
+#if !(NETFX_CORE || NETSTANDARD1_3 || NETSTANDARD2_0)
                         var callExpresion = Expression.Call(
                             Expression.Call(
                                 Expression.Constant(function.Target),
@@ -121,7 +121,7 @@ namespace Jint.Runtime.Interop
                         {
                             @params[i] = Expression.Parameter(genericArguments[i], genericArguments[i].Name + i);
                         }
-#if NET35
+#if !(NETFX_CORE || NETSTANDARD1_3 || NETSTANDARD2_0)
                         var @vars =
                             Expression.NewArrayInit(
                                 typeof(JsValue),
@@ -185,13 +185,13 @@ namespace Jint.Runtime.Interop
                                 Expression.Constant(_engine, typeof(Engine)),
                                 p)).Cast<Expression>());
 
-#if NET35
+#if !(NETFX_CORE || NETSTANDARD1_3 || NETSTANDARD2_0)
                         var callExpression = Expression.Call(
                             Expression.Call(Expression.Constant(function.Target),
                                 function.GetMethodInfo(),
                                 Expression.Constant(JsValue.Undefined, typeof(JsValue)),
                                 @vars),
-                            typeof(JsValue).GetMethod("ToObject"));                        
+                            typeof(JsValue).GetMethod("ToObject"));
 
                         var dynamicExpression = Expression.Invoke(
                             Expression.Lambda(type, callExpression, new ReadOnlyCollection<ParameterExpression>(@params)),

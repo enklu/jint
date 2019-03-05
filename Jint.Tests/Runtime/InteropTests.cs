@@ -69,6 +69,38 @@ namespace Jint.Tests.Runtime
             ");
         }
 
+        public class DelegateRefTester
+        {
+            private Action<int, string> _action;
+
+            public void Set(Action<int, string> action)
+            {
+                _action = action;
+            }
+
+            public bool Compare(Action<int, string> action)
+            {
+                return action == _action;
+            }
+        }
+
+        [Fact]
+        public void TestDelegateReferenceEquivalence()
+        {
+            _engine.SetValue("tester", new DelegateRefTester());
+
+            _engine.Execute(@"
+                function doStuff(i, s) {
+                    console.log('i: ' + i  + ', s: ' + s);
+                }
+
+                tester.Set(doStuff);
+                assert(tester.Compare(doStuff));
+                assert(!tester.Compare(function(a, b) { }));
+            ");
+
+        }
+
         [Fact]
         public void DelegateWithObjectParameterCanBePassedANull()
         {
@@ -781,7 +813,7 @@ namespace Jint.Tests.Runtime
         public void ShouldExecuteActionCallBackAsPredicate()
         {
             _engine.SetValue("a", new A());
-            
+
             // Action
             RunTest(@"
                 var value;
@@ -1488,7 +1520,7 @@ namespace Jint.Tests.Runtime
                         try {
                             throwMyException();
                             return;
-                        } 
+                        }
                         catch(e) {
                             return;
                         }
@@ -1498,7 +1530,7 @@ namespace Jint.Tests.Runtime
                         try {
                             new Thrower().ThrowNotSupportedException();
                             return;
-                        } 
+                        }
                         catch(e) {
                             return;
                         }
@@ -1522,7 +1554,7 @@ namespace Jint.Tests.Runtime
                         try {
                             throwMyException();
                             return '';
-                        } 
+                        }
                         catch(e) {
                             return e.message;
                         }
@@ -1532,7 +1564,7 @@ namespace Jint.Tests.Runtime
                         try {
                             new Thrower().ThrowExceptionWithMessage('myExceptionMessage');
                             return;
-                        } 
+                        }
                         catch(e) {
                             return e.message;
                         }
@@ -1557,7 +1589,7 @@ namespace Jint.Tests.Runtime
                         try {
                             throwMyException1();
                             return '';
-                        } 
+                        }
                         catch(e) {
                             return e.message;
                         }
@@ -1567,7 +1599,7 @@ namespace Jint.Tests.Runtime
                         try {
                             throwMyException2();
                             return '';
-                        } 
+                        }
                         catch(e) {
                             return e.message;
                         }
@@ -1577,7 +1609,7 @@ namespace Jint.Tests.Runtime
                         try {
                             new Thrower().ThrowNotSupportedExceptionWithMessage('myExceptionMessage');
                             return '';
-                        } 
+                        }
                         catch(e) {
                             return e.message;
                         }
@@ -1587,13 +1619,13 @@ namespace Jint.Tests.Runtime
                         try {
                             new Thrower().ThrowArgumentNullException();
                             return '';
-                        } 
+                        }
                         catch(e) {
                             return e.message;
                         }
                     }
                 ");
-            
+
             Assert.Equal(engine.Invoke("throwException1").AsString(), exceptionMessage);
             Assert.Throws<ArgumentNullException>(() => engine.Invoke("throwException2"));
             Assert.Equal(engine.Invoke("throwException3").AsString(), exceptionMessage);

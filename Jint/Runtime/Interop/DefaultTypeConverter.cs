@@ -13,6 +13,7 @@ namespace Jint.Runtime.Interop
         private readonly Engine _engine;
         private static readonly Dictionary<string, bool> _knownConversions = new Dictionary<string, bool>();
         private static readonly object _lockObject = new object();
+        private readonly Dictionary<Delegate, Delegate> _delegateCache = new Dictionary<Delegate, Delegate>();
 
         private static MethodInfo convertChangeType = typeof(System.Convert).GetMethod("ChangeType", new Type[] { typeof(object), typeof(Type), typeof(IFormatProvider) });
         private static MethodInfo jsValueFromObject = typeof(JsValue).GetMethod("FromObject");
@@ -58,6 +59,12 @@ namespace Jint.Runtime.Interop
             {
                 var function = (Func<JsValue, JsValue[], JsValue>)value;
 
+                // Check Cache for existing conversion
+                if (_delegateCache.ContainsKey(function))
+                {
+                    return _delegateCache[function];
+                }
+
                 if (type.IsGenericType())
                 {
                     var genericType = type.GetGenericTypeDefinition();
@@ -97,8 +104,8 @@ namespace Jint.Runtime.Interop
                                 @vars),
                             jsValueToObject);
 
-                        return Expression.Lambda(type, callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile();
-#else
+                        return Cache(function, Expression.Lambda(type, callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
+                        #else
                         var callExpresion = Expression.Block(
                             Expression.Call(
                                 Expression.Call(Expression.Constant(function.Target),
@@ -109,7 +116,7 @@ namespace Jint.Runtime.Interop
                             Expression.Empty());
 
                         return Expression.Lambda(callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile();
-#endif
+                        #endif
                     }
                     else if (genericType.Name.StartsWith("Func"))
                     {
@@ -158,14 +165,14 @@ namespace Jint.Runtime.Interop
                             ),
                             returnType);
 
-                        return Expression.Lambda(type, callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile();
+                        return Cache(function, Expression.Lambda(type, callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
                     }
                 }
                 else
                 {
                     if (type == typeof(Action))
                     {
-                        return (Action)(() => function(JsValue.Undefined, new JsValue[0]));
+                        return Cache(function, (Action) (() => function(JsValue.Undefined, new JsValue[0])));
                     }
                     else if (typeof(MulticastDelegate).IsAssignableFrom(type))
                     {
@@ -212,7 +219,7 @@ namespace Jint.Runtime.Interop
                             new ReadOnlyCollection<ParameterExpression>(@params));
 #endif
 
-                        return Expression.Lambda(type, dynamicExpression, new ReadOnlyCollection<ParameterExpression>(@params)).Compile();
+                        return Cache(function, Expression.Lambda(type, dynamicExpression, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
                     }
                 }
 
@@ -282,6 +289,18 @@ namespace Jint.Runtime.Interop
 
             converted = null;
             return false;
+        }
+
+        /// <summary>
+        /// Caches the wrapper for a specific callable.
+        /// </summary>
+        /// <param name="callable"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
+        private Delegate Cache(Func<JsValue, JsValue[], JsValue> callable, Delegate target)
+        {
+            _delegateCache[callable] = target;
+            return target;
         }
     }
 }

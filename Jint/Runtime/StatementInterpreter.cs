@@ -326,7 +326,8 @@ namespace Jint.Runtime
             var val = _engine.EvaluateExpression(withStatement.Object);
             var obj = TypeConverter.ToObject(_engine, _engine.GetValue(val));
             var oldEnv = _engine.ExecutionContext.LexicalEnvironment;
-            var newEnv = LexicalEnvironment.NewObjectEnvironment(_engine, obj, oldEnv, true);
+            var newEnv = new LexicalEnvironment();
+            newEnv.Setup(new ObjectEnvironmentRecord(_engine, obj, true), oldEnv);
             _engine.ExecutionContext.LexicalEnvironment = newEnv;
 
             Completion c;
@@ -363,13 +364,14 @@ namespace Jint.Runtime
             return r;
         }
 
-        public Completion ExecuteSwitchBlock(IEnumerable<SwitchCase> switchBlock, JsValue input)
+        public Completion ExecuteSwitchBlock(List<SwitchCase> switchBlock, JsValue input)
         {
             JsValue v = Undefined.Instance;
             SwitchCase defaultCase = null;
             bool hit = false;
-            foreach (var clause in switchBlock)
+            for (int i = 0, len = switchBlock.Count; i < len; i++)
             {
+                var clause = switchBlock[i];
                 if (clause.Test == null)
                 {
                     defaultCase = clause;
@@ -393,7 +395,6 @@ namespace Jint.Runtime
 
                     v = r.Value != null ? r.Value : Undefined.Instance;
                 }
-
             }
 
             // do we need to execute the default case ?
@@ -411,7 +412,7 @@ namespace Jint.Runtime
             return new Completion(Completion.Normal, v, null);
         }
 
-        public Completion ExecuteStatementList(IEnumerable<Statement> statementList)
+        public Completion ExecuteStatementList(List<Statement> statementList)
         {
             var c = new Completion(Completion.Normal, null, null);
             Completion sl = c;
@@ -419,8 +420,9 @@ namespace Jint.Runtime
 
             try
             {
-                foreach (var statement in statementList)
+                for (int i = 0, len = statementList.Count; i < len; i++)
                 {
+                    var statement = statementList[i];
                     s = statement;
                     c = ExecuteStatement(statement);
                     if (c.Type != Completion.Normal)
@@ -470,8 +472,9 @@ namespace Jint.Runtime
                 // execute catch
                 if (tryStatement.Handlers.Any())
                 {
-                    foreach (var catchClause in tryStatement.Handlers)
+                    for (int i = 0, len = tryStatement.Handlers.Count; i < len; i++)
                     {
+                        var catchClause = tryStatement.Handlers[i];
                         var c = _engine.GetValue(b);
                         var oldEnv = _engine.ExecutionContext.LexicalEnvironment;
                         var catchEnv = LexicalEnvironment.NewDeclarativeEnvironment(_engine, oldEnv);
@@ -500,13 +503,14 @@ namespace Jint.Runtime
 
         public Completion ExecuteProgram(Program program)
         {
-            return ExecuteStatementList(program.Body);
+            return ExecuteStatementList(program.Body.ToList());
         }
 
         public Completion ExecuteVariableDeclaration(VariableDeclaration statement)
         {
-            foreach (var declaration in statement.Declarations)
+            for (int index = 0, len = statement.Declarations.Count; index < len; index++)
             {
+                var declaration = statement.Declarations[index];
                 if (declaration.Init != null)
                 {
                     var lhs = _engine.EvaluateExpression(declaration.Id) as Reference;
@@ -533,7 +537,7 @@ namespace Jint.Runtime
 
         public Completion ExecuteBlockStatement(BlockStatement blockStatement)
         {
-            return ExecuteStatementList(blockStatement.Body);
+            return ExecuteStatementList(blockStatement.Body.ToList());
         }
 
         public Completion ExecuteDebuggerStatement(DebuggerStatement debuggerStatement)

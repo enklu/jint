@@ -14,6 +14,9 @@ namespace Jint.Runtime.Interop
         private static readonly Dictionary<string, bool> _knownConversions = new Dictionary<string, bool>();
         private static readonly object _lockObject = new object();
 
+        private readonly Dictionary<Delegate, object> _delegateCache = new Dictionary<Delegate, object>();
+        private readonly Dictionary<Type, ICallableConversion> _delegateConversions = new Dictionary<Type, ICallableConversion>();
+
         private static MethodInfo convertChangeType = typeof(System.Convert).GetMethod("ChangeType", new Type[] { typeof(object), typeof(Type), typeof(IFormatProvider) });
         private static MethodInfo jsValueFromObject = typeof(JsValue).GetMethod("FromObject");
         private static MethodInfo jsValueToObject = typeof(JsValue).GetMethod("ToObject");
@@ -21,6 +24,22 @@ namespace Jint.Runtime.Interop
         public DefaultTypeConverter(Engine engine)
         {
             _engine = engine;
+        }
+
+        /// <summary>
+        /// Registers a conversion operation for a specific target type. When the callable must be adapted to this type,
+        /// use the provided conversion operation.
+        /// </summary>
+        /// <param name="targetType">The <see cref="Type"/> of the object Jint is trying to convert the callable to.</param>
+        /// <param name="conversion">The conversion implementation to use for the specific target type</param>
+        public void RegisterDelegateConversion(Type targetType, ICallableConversion conversion)
+        {
+            if (_delegateConversions.ContainsKey(targetType))
+            {
+                return;
+            }
+
+            _delegateConversions[targetType] = conversion;
         }
 
         public virtual object Convert(object value, Type type, IFormatProvider formatProvider)
@@ -58,6 +77,19 @@ namespace Jint.Runtime.Interop
             {
                 var function = (Func<JsValue, JsValue[], JsValue>)value;
 
+                // Check Cache for existing conversion
+                if (_delegateCache.ContainsKey(function))
+                {
+                    return _delegateCache[function];
+                }
+
+                // Check for registered callable conversion
+                if (_delegateConversions.ContainsKey(type))
+                {
+                    var converted = _delegateConversions[type].Convert(function);
+                    return Cache(function, converted);
+                }
+
                 if (type.IsGenericType())
                 {
                     var genericType = type.GetGenericTypeDefinition();
@@ -88,14 +120,28 @@ namespace Jint.Runtime.Interop
                         }
                         var @vars = Expression.NewArrayInit(typeof(JsValue), tmpVars);
 
-                        var callExpresion = Expression.Block(Expression.Call(
-                                                Expression.Call(Expression.Constant(function.Target),
-                                                    function.GetMethodInfo(),
-                                                    Expression.Constant(JsValue.Undefined, typeof(JsValue)),
-                                                    @vars),
-                                                jsValueToObject), Expression.Empty());
+#if !(NETFX_CORE || NETSTANDARD1_3 || NETSTANDARD2_0)
+                        var callExpresion = Expression.Call(
+                            Expression.Call(
+                                Expression.Constant(function.Target),
+                                function.GetMethodInfo(),
+                                Expression.Constant(JsValue.Undefined, typeof(JsValue)),
+                                @vars),
+                            jsValueToObject);
+
+                        return Cache(function, Expression.Lambda(type, callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
+                        #else
+                        var callExpresion = Expression.Block(
+                            Expression.Call(
+                                Expression.Call(Expression.Constant(function.Target),
+                                    function.GetMethodInfo(),
+                                    Expression.Constant(JsValue.Undefined, typeof(JsValue)),
+                                    @vars),
+                                jsValueToObject),
+                            Expression.Empty());
 
                         return Expression.Lambda(callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile();
+                        #endif
                     }
                     else if (genericType.Name.StartsWith("Func"))
                     {
@@ -107,53 +153,82 @@ namespace Jint.Runtime.Interop
                         {
                             @params[i] = Expression.Parameter(genericArguments[i], genericArguments[i].Name + i);
                         }
-
+#if !(NETFX_CORE || NETSTANDARD1_3 || NETSTANDARD2_0)
+                        var @vars =
+                            Expression.NewArrayInit(
+                                typeof(JsValue),
+                                @params
+                                    .Select(p => {
+                                        var boxingExpression = Expression.Convert(p, typeof(object));
+                                        return Expression.Call(null, jsValueFromObject, Expression.Constant(_engine, typeof(Engine)), boxingExpression);
+                                    })
+                                    .Cast<Expression>());
+#else
                         var @vars =
                             Expression.NewArrayInit(typeof(JsValue),
                                 @params.Select(p =>
                                 {
                                     var boxingExpression = Expression.Convert(p, typeof(object));
                                     return Expression.Call(null, jsValueFromObject, Expression.Constant(_engine, typeof(Engine)), boxingExpression);
-                                })
-                            );
-
+                                }));
+#endif
                         // the final result's type needs to be changed before casting,
                         // for instance when a function returns a number (double) but C# expects an integer
 
                         var callExpresion = Expression.Convert(
-                                                Expression.Call(null,
-                                                    convertChangeType,
-                                                    Expression.Call(
-                                                            Expression.Call(Expression.Constant(function.Target),
-                                                                    function.GetMethodInfo(),
-                                                                    Expression.Constant(JsValue.Undefined, typeof(JsValue)),
-                                                                    @vars),
-                                                            jsValueToObject),
-                                                        Expression.Constant(returnType, typeof(Type)),
-                                                        Expression.Constant(System.Globalization.CultureInfo.InvariantCulture, typeof(IFormatProvider))
-                                                        ),
-                                                    returnType);
+                            Expression.Call(null,
+                                convertChangeType,
+                                Expression.Call(
+                                    Expression.Call(Expression.Constant(function.Target),
+                                        function.GetMethodInfo(),
+                                        Expression.Constant(JsValue.Undefined, typeof(JsValue)),
+                                        @vars),
+                                    jsValueToObject),
+                                Expression.Constant(returnType, typeof(Type)),
+                                Expression.Constant(System.Globalization.CultureInfo.InvariantCulture,
+                                    typeof(IFormatProvider))
+                            ),
+                            returnType);
 
-                        return Expression.Lambda(callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile();
+                        return Cache(function, Expression.Lambda(type, callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
                     }
                 }
                 else
                 {
                     if (type == typeof(Action))
                     {
-                        return (Action)(() => function(JsValue.Undefined, new JsValue[0]));
+                        return Cache(function, (Action) (() => function(JsValue.Undefined, new JsValue[0])));
                     }
                     else if (typeof(MulticastDelegate).IsAssignableFrom(type))
                     {
                         var method = type.GetMethod("Invoke");
                         var arguments = method.GetParameters();
 
-                        var @params = new ParameterExpression[arguments.Count()];
+                        var @params = new ParameterExpression[arguments.Length];
                         for (var i = 0; i < @params.Count(); i++)
                         {
-                            @params[i] = Expression.Parameter(typeof(object), arguments[i].Name);
+                            @params[i] = Expression.Parameter(arguments[i].ParameterType, arguments[i].Name);
                         }
-                        var @vars = Expression.NewArrayInit(typeof(JsValue), @params.Select(p => Expression.Call(null, typeof(JsValue).GetMethod("FromObject"), Expression.Constant(_engine, typeof(Engine)), p)));
+
+                        var @vars = Expression.NewArrayInit(
+                            typeof(JsValue),
+                            @params.Select(p => Expression.Call(null,
+                                typeof(JsValue).GetMethod("FromObject"),
+                                Expression.Constant(_engine, typeof(Engine)),
+                                p)).Cast<Expression>());
+
+#if !(NETFX_CORE || NETSTANDARD1_3 || NETSTANDARD2_0)
+                        var callExpression = Expression.Call(
+                            Expression.Call(Expression.Constant(function.Target),
+                                function.GetMethodInfo(),
+                                Expression.Constant(JsValue.Undefined, typeof(JsValue)),
+                                @vars),
+                            typeof(JsValue).GetMethod("ToObject"));
+
+                        var dynamicExpression = Expression.Invoke(
+                            Expression.Lambda(type, callExpression, new ReadOnlyCollection<ParameterExpression>(@params)),
+                            new ReadOnlyCollection<ParameterExpression>(@params).Cast<Expression>());
+#else
 
                         var callExpression = Expression.Block(
                                                 Expression.Call(
@@ -164,9 +239,12 @@ namespace Jint.Runtime.Interop
                                                     typeof(JsValue).GetMethod("ToObject")),
                                                 Expression.Empty());
 
-                        var dynamicExpression = Expression.Invoke(Expression.Lambda(callExpression, new ReadOnlyCollection<ParameterExpression>(@params)), new ReadOnlyCollection<ParameterExpression>(@params));
+                        var dynamicExpression = Expression.Invoke(
+                            Expression.Lambda(callExpression, new ReadOnlyCollection<ParameterExpression>(@params)),
+                            new ReadOnlyCollection<ParameterExpression>(@params));
+#endif
 
-                        return Expression.Lambda(type, dynamicExpression, new ReadOnlyCollection<ParameterExpression>(@params)).Compile();
+                        return Cache(function, Expression.Lambda(type, dynamicExpression, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
                     }
                 }
 
@@ -236,6 +314,15 @@ namespace Jint.Runtime.Interop
 
             converted = null;
             return false;
+        }
+
+        /// <summary>
+        /// Caches the wrapper for a specific callable.
+        /// </summary>
+        private object Cache(Func<JsValue, JsValue[], JsValue> callable, object target)
+        {
+            _delegateCache[callable] = target;
+            return target;
         }
     }
 }

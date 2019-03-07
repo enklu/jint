@@ -1425,7 +1425,7 @@ namespace Jint.Parser
             return node;
         }
 
-        public ArrayExpression CreateArrayExpression(IEnumerable<Expression> elements)
+        public ArrayExpression CreateArrayExpression(List<Expression> elements)
         {
             return new ArrayExpression
                 {
@@ -1757,7 +1757,7 @@ namespace Jint.Parser
                 };
         }
 
-        public SwitchCase CreateSwitchCase(Expression test, IEnumerable<Statement> consequent)
+        public SwitchCase CreateSwitchCase(Expression test, List<Statement> consequent)
         {
             return new SwitchCase
                 {
@@ -1767,7 +1767,7 @@ namespace Jint.Parser
                 };
         }
 
-        public SwitchStatement CreateSwitchStatement(Expression discriminant, IEnumerable<SwitchCase> cases)
+        public SwitchStatement CreateSwitchStatement(Expression discriminant, List<SwitchCase> cases)
         {
             return new SwitchStatement
                 {
@@ -1794,8 +1794,8 @@ namespace Jint.Parser
                 };
         }
 
-        public TryStatement CreateTryStatement(Statement block, IEnumerable<Statement> guardedHandlers,
-                                               IEnumerable<CatchClause> handlers, Statement finalizer)
+        public TryStatement CreateTryStatement(Statement block, List<Statement> guardedHandlers,
+                                               List<CatchClause> handlers, Statement finalizer)
         {
             return new TryStatement
                 {
@@ -1830,7 +1830,7 @@ namespace Jint.Parser
         }
 
 
-        public VariableDeclaration CreateVariableDeclaration(IEnumerable<VariableDeclarator> declarations, string kind)
+        public VariableDeclaration CreateVariableDeclaration(IList<VariableDeclarator> declarations, string kind)
         {
             var variableDeclaration = new VariableDeclaration
                 {
@@ -2886,7 +2886,7 @@ namespace Jint.Parser
             return MarkEnd(CreateVariableDeclarator(id, init));
         }
 
-        private IEnumerable<VariableDeclarator> ParseVariableDeclarationList(string kind)
+        private IList<VariableDeclarator> ParseVariableDeclarationList(string kind)
         {
             var list = new List<VariableDeclarator>();
 
@@ -2907,7 +2907,7 @@ namespace Jint.Parser
         {
             ExpectKeyword("var");
 
-            IEnumerable<VariableDeclarator> declarations = ParseVariableDeclarationList(null);
+            var declarations = ParseVariableDeclarationList(null);
 
             ConsumeSemicolon();
 
@@ -2924,7 +2924,7 @@ namespace Jint.Parser
 
             ExpectKeyword(kind);
 
-            IEnumerable<VariableDeclarator> declarations = ParseVariableDeclarationList(kind);
+            var declarations = ParseVariableDeclarationList(kind);
 
             ConsumeSemicolon();
 
@@ -3030,7 +3030,7 @@ namespace Jint.Parser
         {
             MarkStart();
             Token token = Lex();
-            IEnumerable<VariableDeclarator> declarations = ParseVariableDeclarationList(null);
+            var declarations = ParseVariableDeclarationList(null);
 
             return MarkEnd(CreateVariableDeclaration(declarations, (string) token.Value));
         }
@@ -3438,7 +3438,7 @@ namespace Jint.Parser
                 ThrowError(Token.Empty, Messages.NoCatchOrFinally);
             }
 
-            return CreateTryStatement(block, new Statement[0], handlers, finalizer);
+            return CreateTryStatement(block, new List<Statement>(), handlers, finalizer);
         }
 
         // 12.15 The debugger statement

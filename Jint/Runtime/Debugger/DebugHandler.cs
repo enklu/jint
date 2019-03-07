@@ -61,7 +61,7 @@ namespace Jint.Runtime.Debugger
                     }
                 }
 
-                stack += string.Join(", ", paramStrings);
+                stack += string.Join(", ", paramStrings.ToArray());
                 stack += ")";
                 _debugCallStack.Push(stack);
             }

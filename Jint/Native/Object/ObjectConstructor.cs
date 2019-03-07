@@ -226,8 +226,10 @@ namespace Jint.Native.Object
                 var desc = PropertyDescriptor.ToPropertyDescriptor(Engine, descObj);
                 descriptors.Add(new KeyValuePair<string, PropertyDescriptor>(p.Key, desc));
             }
-            foreach (var pair in descriptors)
+
+            for (int index = 0, len = descriptors.Count; index < len; index++)
             {
+                var pair = descriptors[index];
                 o.DefineOwnProperty(pair.Key, pair.Value, true);
             }
 
@@ -389,15 +391,17 @@ namespace Jint.Native.Object
             var n = enumerableProperties.Length;
             var array = Engine.Array.Construct(new JsValue[] {n});
             var index = 0;
-            foreach (var prop in enumerableProperties)
+            for (int i = 0, len = enumerableProperties.Length; i < len; i++)
             {
+                var prop = enumerableProperties[i];
                 var p = prop.Key;
                 array.DefineOwnProperty(
-                    TypeConverter.ToString(index), 
-                    new PropertyDescriptor(p, true, true, true), 
+                    TypeConverter.ToString(index),
+                    new PropertyDescriptor(p, true, true, true),
                     false);
                 index++;
             }
+
             return array;
         }
     }

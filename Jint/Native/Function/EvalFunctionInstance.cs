@@ -33,7 +33,9 @@ namespace Jint.Native.Function
             {
                 var parser = new JavaScriptParser(StrictModeScope.IsStrictModeCode);
                 var program = parser.Parse(code);
-                using (new StrictModeScope(program.Strict))
+
+                var scope = Engine.PoolStrictMode.Get();
+                scope.Setup(program.Strict);
                 {
                     using (new EvalCodeScope())
                     {
@@ -63,6 +65,9 @@ namespace Jint.Native.Function
                             }
                             else
                             {
+                                scope.Teardown();
+                                Engine.PoolStrictMode.Put(scope);
+
                                 return result.GetValueOrDefault();
                             }
                         }
@@ -77,6 +82,9 @@ namespace Jint.Native.Function
                             {
                                 Engine.LeaveExecutionContext();
                             }
+
+                            scope.Teardown();
+                            Engine.PoolStrictMode.Put(scope);
                         }
                     }
                 }

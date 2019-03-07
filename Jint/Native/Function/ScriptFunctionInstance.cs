@@ -56,7 +56,8 @@ namespace Jint.Native.Function
         /// <returns></returns>
         public override JsValue Call(JsValue thisArg, JsValue[] arguments)
         {
-            using (new StrictModeScope(Strict, true))
+            var scope = Engine.PoolStrictMode.Get();
+            scope.Setup(Strict, true);
             {
                 // setup new execution context http://www.ecma-international.org/ecma-262/5.1/#sec-10.4.3
                 JsValue thisBinding;
@@ -101,6 +102,9 @@ namespace Jint.Native.Function
 
                     if (result.Type == Completion.Return)
                     {
+                        scope.Teardown();
+                        Engine.PoolStrictMode.Put(scope);
+
                         return result.GetValueOrDefault();
                     }
                 }
@@ -108,6 +112,9 @@ namespace Jint.Native.Function
                 {
                     Engine.LeaveExecutionContext();
                 }
+
+                scope.Teardown();
+                Engine.PoolStrictMode.Put(scope);
 
                 return Undefined.Instance;
             }

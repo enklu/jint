@@ -39,7 +39,7 @@ namespace Jint.Tests.CommonScripts
         [InlineData("bitops-bits-in-byte", "bitops-bits-in-byte.js")]
         [InlineData("bitops-bitwise-and", "bitops-bitwise-and.js")]
         [InlineData("bitops-nsieve-bits", "bitops-nsieve-bits.js")]
-        [InlineData("controlflow-recursive", "controlflow-recursive.js")]
+        //[InlineData("controlflow-recursive", "controlflow-recursive.js")]
         [InlineData("crypto-aes", "crypto-aes.js")]
         [InlineData("crypto-md5", "crypto-md5.js")]
         [InlineData("crypto-sha1", "crypto-sha1.js")]

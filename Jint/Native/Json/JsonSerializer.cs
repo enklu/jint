@@ -214,8 +214,9 @@ namespace Jint.Native.Json
         {
             var sb = new System.Text.StringBuilder("\"");
 
-            foreach (char c in value)
+            for (int index = 0, len = value.Length; index < len; index++)
             {
+                char c = value[index];
                 switch (c)
                 {
                     case '\"':
@@ -247,6 +248,7 @@ namespace Jint.Native.Json
                         }
                         else
                             sb.Append(c);
+
                         break;
                 }
             }
@@ -322,8 +324,9 @@ namespace Jint.Native.Json
                 .ToList();
 
             var partial = new List<string>();
-            foreach (var p in k)
+            for (int index = 0, len = k.Count; index < len; index++)
             {
+                var p = k[index];
                 var strP = Str(p, value);
                 if (strP != JsValue.Undefined)
                 {
@@ -332,10 +335,12 @@ namespace Jint.Native.Json
                     {
                         member += " ";
                     }
+
                     member += strP.AsString(); // TODO:This could be undefined
                     partial.Add(member);
                 }
             }
+
             if (partial.Count == 0)
             {
                 final = "{}";

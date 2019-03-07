@@ -1,5 +1,7 @@
-﻿using Jint.Native;
-using Jint.Native.Object;
+﻿using System;
+using System.Collections.Generic;
+using Jint.Native;
+using Jint.Runtime.Memory;
 using Jint.Runtime.References;
 
 namespace Jint.Runtime.Environments
@@ -9,25 +11,16 @@ namespace Jint.Runtime.Environments
     /// http://www.ecma-international.org/ecma-262/5.1/#sec-10.2
     /// http://www.ecma-international.org/ecma-262/5.1/#sec-10.2.2
     /// </summary>
-    public sealed class LexicalEnvironment
+    public sealed class LexicalEnvironment 
     {
-        private readonly EnvironmentRecord _record;
-        private readonly LexicalEnvironment _outer;
+        public EnvironmentRecord Record { get; private set; }
 
-        public LexicalEnvironment(EnvironmentRecord record, LexicalEnvironment outer)
-        {
-            _record = record;
-            _outer = outer;
-        }
+        public LexicalEnvironment Outer { get; private set; }
 
-        public EnvironmentRecord Record
+        public void Setup(EnvironmentRecord record, LexicalEnvironment outer)
         {
-            get { return _record; }
-        }
-
-        public LexicalEnvironment Outer
-        {
-            get { return _outer; }
+            Record = record;
+            Outer = outer;
         }
 
         public static Reference GetIdentifierReference(LexicalEnvironment lex, string name, bool strict)
@@ -50,14 +43,14 @@ namespace Jint.Runtime.Environments
             return GetIdentifierReference(lex.Outer, name, strict);
         }
 
+        /// <summary>
+        /// Creates a new Declarative LexicalEnvironment instance.
+        /// </summary>
         public static LexicalEnvironment NewDeclarativeEnvironment(Engine engine, LexicalEnvironment outer = null)
         {
-            return new LexicalEnvironment(new DeclarativeEnvironmentRecord(engine), outer);
-        }
-
-        public static LexicalEnvironment NewObjectEnvironment(Engine engine, ObjectInstance objectInstance, LexicalEnvironment outer, bool provideThis)
-        {
-            return new LexicalEnvironment(new ObjectEnvironmentRecord(engine, objectInstance, provideThis), outer);
+            var env = new LexicalEnvironment();
+            env.Setup(new DeclarativeEnvironmentRecord(engine), outer);
+            return env;
         }
     }
 

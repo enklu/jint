@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Jint.Native;
 using Jint.Native.Error;
 using Jint.Parser;
 using Jint.Parser.Ast;
-using Jint.Runtime.CallStack;
-using Jint.Runtime.Descriptors;
 
 namespace Jint.Runtime
 {
@@ -15,6 +11,11 @@ namespace Jint.Runtime
     {
         private readonly JsValue _errorObject;
         private string _callStack;
+
+        public JavaScriptException(string message)
+        {
+            _errorObject = new JsValue(message);
+        }
 
         public JavaScriptException(ErrorConstructor errorConstructor) : base("")
         {
@@ -48,7 +49,8 @@ namespace Jint.Runtime
                     if (index != 0)
                         sb.Append(", ");
                     var arg = cse.CallExpression.Arguments[index];
-                    if (arg is IPropertyKeyExpression pke)
+                    var pke = arg as IPropertyKeyExpression;
+                    if (null != pke)
                         sb.Append(pke.GetKey());
                     else
                         sb.Append(arg);
@@ -114,7 +116,7 @@ namespace Jint.Runtime
             }
         }
 
-        public Jint.Parser.Location Location { get; set; }
+        public Location Location { get; set; }
 
         public int LineNumber { get { return null == Location ? 0 : Location.Start.Line; } }
 

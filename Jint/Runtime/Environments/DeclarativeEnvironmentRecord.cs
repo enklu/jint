@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Jint.Native;
+using Jint.Runtime.Memory;
 
 namespace Jint.Runtime.Environments
 {
@@ -10,7 +11,7 @@ namespace Jint.Runtime.Environments
     /// </summary>
     public sealed class DeclarativeEnvironmentRecord : EnvironmentRecord
     {
-        private readonly Engine _engine;
+        private Engine _engine;
         private readonly IDictionary<string, Binding> _bindings = new Dictionary<string, Binding>();
 
         public DeclarativeEnvironmentRecord(Engine engine) : base(engine)

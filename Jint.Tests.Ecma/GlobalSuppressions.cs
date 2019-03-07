@@ -5,4 +5,4 @@
 // a specific target and scoped to a namespace, type, member, etc.
 
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "xUnit1004:Test methods should not be skipped", Justification = "<Pending>", Scope = "module")]
-
+[assembly: Xunit.CollectionBehavior(DisableTestParallelization = true)]

@@ -655,6 +655,7 @@ namespace Jint.Runtime
                         break;
 
                     case PropertyKind.Get:
+                    {
                         var getter = property.Value as FunctionExpression;
 
                         if (getter == null)
@@ -663,7 +664,9 @@ namespace Jint.Runtime
                         }
 
                         ScriptFunctionInstance get;
-                        using (new StrictModeScope(getter.Strict))
+
+                        var scope = Engine.PoolStrictMode.Get();
+                        scope.Setup(getter.Strict);
                         {
                             get = new ScriptFunctionInstance(
                                 _engine,
@@ -672,11 +675,15 @@ namespace Jint.Runtime
                                 StrictModeScope.IsStrictModeCode
                             );
                         }
+                        scope.Teardown();
+                        Engine.PoolStrictMode.Put(scope);
 
-                        propDesc = new PropertyDescriptor(get: get, set: null, enumerable: true, configurable:true);
+                        propDesc = new PropertyDescriptor(get: get, set: null, enumerable: true, configurable: true);
                         break;
+                    }
 
                     case PropertyKind.Set:
+                    {
                         var setter = property.Value as FunctionExpression;
 
                         if (setter == null)
@@ -685,7 +692,9 @@ namespace Jint.Runtime
                         }
 
                         ScriptFunctionInstance set;
-                        using (new StrictModeScope(setter.Strict))
+
+                        var scope = Engine.PoolStrictMode.Get();
+                        scope.Setup(setter.Strict);
                         {
 
                             set = new ScriptFunctionInstance(
@@ -693,10 +702,14 @@ namespace Jint.Runtime
                                 setter,
                                 _engine.ExecutionContext.LexicalEnvironment,
                                 StrictModeScope.IsStrictModeCode
-                                );
+                            );
                         }
-                        propDesc = new PropertyDescriptor(get:null, set: set, enumerable: true, configurable: true);
+                        scope.Teardown();
+                        Engine.PoolStrictMode.Put(scope);
+
+                        propDesc = new PropertyDescriptor(get: null, set: set, enumerable: true, configurable: true);
                         break;
+                    }
 
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -908,8 +921,9 @@ namespace Jint.Runtime
         public JsValue EvaluateSequenceExpression(SequenceExpression sequenceExpression)
         {
             var result = Undefined.Instance;
-            foreach (var expression in sequenceExpression.Expressions)
+            for (int i = 0, len = sequenceExpression.Expressions.Count; i < len; i++)
             {
+                var expression = sequenceExpression.Expressions[i];
                 result = _engine.GetValue(_engine.EvaluateExpression(expression));
             }
 
@@ -987,14 +1001,16 @@ namespace Jint.Runtime
         {
             var a = _engine.Array.Construct(new JsValue[] { arrayExpression.Elements.Count() });
             var n = 0;
-            foreach (var expr in arrayExpression.Elements)
+            for (int i = 0, len = arrayExpression.Elements.Count; i < len; i++)
             {
+                var expr = arrayExpression.Elements[i];
                 if (expr != null)
                 {
                     var value = _engine.GetValue(EvaluateExpression(expr));
                     a.DefineOwnProperty(n.ToString(),
                         new PropertyDescriptor(value, true, true, true), false);
                 }
+
                 n++;
             }
 

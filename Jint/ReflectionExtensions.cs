@@ -1,65 +1,89 @@
-﻿#if NETSTANDARD1_3
+﻿#if (NETFX_CORE || NETSTANDARD1_3 || NETSTANDARD2_0)
 using System;
 using System.Linq;
 using System.Reflection;
 
-namespace Jint
+public static class ReflectionExtensions
 {
-    internal static class ReflectionExtensions
+    public static bool IsEnum(this Type type)
     {
-        internal static bool IsEnum(this Type type)
-        {
-            return type.GetTypeInfo().IsEnum;
-        }
+        return type.GetTypeInfo().IsEnum;
+    }
 
-        internal static bool IsGenericType(this Type type)
-        {
-            return type.GetTypeInfo().IsGenericType;
-        }
+    public static bool IsGenericType(this Type type)
+    {
+        return type.GetTypeInfo().IsGenericType;
+    }
 
-        internal static bool IsValueType(this Type type)
-        {
-            return type.GetTypeInfo().IsValueType;
-        }
+    public static bool IsValueType(this Type type)
+    {
+        return type.GetTypeInfo().IsValueType;
+    }
 
-        internal static bool HasAttribute<T>(this ParameterInfo member) where T : Attribute
-        {
-            return member.GetCustomAttributes<T>().Any();
-        }
+    public static bool HasAttribute<T>(this ParameterInfo member) where T : Attribute
+    {
+        return member.GetCustomAttributes<T>().Any();
+    }
+
+    public static bool HasAttribute<T>(this MethodBase methodBase) where T : Attribute
+    {
+        return methodBase.GetCustomAttributes<T>().Any();
+    }
+
+    public static T[] GetCustomAttributes<T>(this Type @this, bool inherit) where T : Attribute
+    {
+        return (T[]) @this.GetTypeInfo().GetCustomAttributes(typeof(T), inherit).ToArray();
+    }
+
+    public static object[] GetCustomAttributes(this Type @this, Type attributeType, bool inherit)
+    {
+        return @this.GetTypeInfo().GetCustomAttributes(attributeType, inherit).ToArray();
     }
 }
 #else
 using System;
 using System.Reflection;
 
-namespace Jint
+public static class ReflectionExtensions
 {
-    internal static class ReflectionExtensions
+    public static bool IsEnum(this Type type)
     {
-        internal static bool IsEnum(this Type type)
-        {
-            return type.IsEnum;
-        }
+        return type.IsEnum;
+    }
 
-        internal static bool IsGenericType(this Type type)
-        {
-            return type.IsGenericType;
-        }
+    public static bool IsGenericType(this Type type)
+    {
+        return type.IsGenericType;
+    }
 
-        internal static bool IsValueType(this Type type)
-        {
-            return type.IsValueType;
-        }
+    public static bool IsValueType(this Type type)
+    {
+        return type.IsValueType;
+    }
 
-        internal static bool HasAttribute<T>(this ParameterInfo member) where T : Attribute
-        {
-            return Attribute.IsDefined(member, typeof(T));
-        }
+    public static bool HasAttribute<T>(this ParameterInfo member) where T : Attribute
+    {
+        return Attribute.IsDefined(member, typeof(T));
+    }
 
-        internal static MethodInfo GetMethodInfo(this Delegate d)
-        {
-            return d.Method;
-        }
+    public static bool HasAttribute<T>(this MethodBase methodBase) where T : Attribute
+    {
+        return Attribute.IsDefined(methodBase, typeof(T), true);
+    }
+
+    public static T[] GetCustomAttributes<T>(this Type @this, bool inherit) where T : Attribute
+    {
+        return (T[])Attribute.GetCustomAttributes(@this, typeof(T), inherit);
+    }
+
+    public static object[] GetCustomAttributes(this Type @this, Type attributeType, bool inherit)
+    {
+        return (object[]) Attribute.GetCustomAttributes(@this, attributeType, inherit);
+    }
+
+    public static MethodInfo GetMethodInfo(this Delegate d)
+    {
+        return d.Method;
     }
 }
 #endif

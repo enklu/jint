@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
-using System.Dynamic;
-using System.Reflection;
 using System.Threading;
 using Jint.Native.Array;
 using Jint.Native.Boolean;
@@ -69,67 +66,67 @@ namespace Jint.Native
 
         private readonly Types _type;
 
-        [Pure]
+        // [Pure]
         public bool IsPrimitive()
         {
             return _type != Types.Object && _type != Types.None;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsUndefined()
         {
             return _type == Types.Undefined;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsArray()
         {
             return IsObject() && AsObject() is ArrayInstance;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsDate()
         {
             return IsObject() && AsObject() is DateInstance;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsRegExp()
         {
             return IsObject() && AsObject() is RegExpInstance;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsObject()
         {
             return _type == Types.Object;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsString()
         {
             return _type == Types.String;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsNumber()
         {
             return _type == Types.Number;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsBoolean()
         {
             return _type == Types.Boolean;
         }
 
-        [Pure]
+        // [Pure]
         public bool IsNull()
         {
             return _type == Types.Null;
         }
 
-        [Pure]
+        // [Pure]
         public ObjectInstance AsObject()
         {
             if (_type != Types.Object)
@@ -140,7 +137,7 @@ namespace Jint.Native
             return _object as ObjectInstance;
         }
 
-        [Pure]
+        // [Pure]
         public ArrayInstance AsArray()
         {
             if (!IsArray())
@@ -151,7 +148,7 @@ namespace Jint.Native
             return _object as ArrayInstance;
         }
 
-        [Pure]
+        // [Pure]
         public DateInstance AsDate()
         {
             if (!IsDate())
@@ -162,7 +159,7 @@ namespace Jint.Native
             return _object as DateInstance;
         }
 
-        [Pure]
+        // [Pure]
         public RegExpInstance AsRegExp()
         {
             if (!IsRegExp())
@@ -173,7 +170,7 @@ namespace Jint.Native
             return _object as RegExpInstance;
         }
 
-        [Pure]
+        // [Pure]
         public T TryCast<T>(Action<JsValue> fail = null) where T : class
         {
             if (IsObject())
@@ -204,7 +201,7 @@ namespace Jint.Native
             return _object as T;
         }
 
-        [Pure]
+        // [Pure]
         public bool AsBoolean()
         {
             if (_type != Types.Boolean)
@@ -215,7 +212,7 @@ namespace Jint.Native
             return _double != 0;
         }
 
-        [Pure]
+        // [Pure]
         public string AsString()
         {
             if (_type != Types.String)
@@ -231,7 +228,7 @@ namespace Jint.Native
             return _object as string;
         }
 
-        [Pure]
+        // [Pure]
         public double AsNumber()
         {
             if (_type != Types.Number)
@@ -296,8 +293,9 @@ namespace Jint.Native
                 return Null;
             }
 
-            foreach (var converter in engine.Options._ObjectConverters)
+            for (int index = 0, len = engine.Options._ObjectConverters.Count; index < len; index++)
             {
+                var converter = engine.Options._ObjectConverters[index];
                 JsValue result;
                 if (converter.TryConvert(value, out result))
                 {
@@ -321,10 +319,10 @@ namespace Jint.Native
             {
                 // Learn conversion.
                 // Learn conversion, racy, worst case we'll try again later
-                Interlocked.CompareExchange(ref Engine.TypeMappers, new Dictionary<Type, Func<Engine, object, JsValue>>(typeMappers)
-                {
-                    [valueType] = (Engine e, object v) => new JsValue((ObjectInstance)v)
-                }, typeMappers);
+                var newTypeMap = new Dictionary<Type, Func<Engine, object, JsValue>>(typeMappers);
+                newTypeMap[valueType] = (Engine e, object v) => new JsValue((ObjectInstance) v);
+                Interlocked.CompareExchange(ref Engine.TypeMappers, newTypeMap, typeMappers);
+
                 return new JsValue(instance);
             }
 
@@ -352,10 +350,10 @@ namespace Jint.Native
                     return jsArray;
                 };
                 // racy, we don't care, worst case we'll catch up later
-                Interlocked.CompareExchange(ref Engine.TypeMappers, new Dictionary<Type, Func<Engine, object, JsValue>>(typeMappers)
-                {
-                    [valueType] = convert
-                }, typeMappers);
+                var typeMap = new Dictionary<Type, Func<Engine, object, JsValue>>(typeMappers);
+                typeMap[valueType] = convert;
+                Interlocked.CompareExchange(ref Engine.TypeMappers, typeMap, typeMappers);
+
                 return convert(engine, a);
             }
 
@@ -372,6 +370,15 @@ namespace Jint.Native
 
             // if no known type could be guessed, wrap it as an ObjectInstance
             return new ObjectWrapper(engine, value);
+        }
+
+        /// <summary>
+        /// Converts a <see cref="JsValue"/> to its underlying CLR value.
+        /// </summary>
+        /// <returns>The underlying CLR value of the <see cref="JsValue"/> instance.</returns>
+        public T To<T>()
+        {
+            return (T) ToObject();
         }
 
         /// <summary>
@@ -481,20 +488,20 @@ namespace Jint.Native
 
                         case "Arguments":
                         case "Object":
-#if __IOS__
-                                IDictionary<string, object> o = new Dictionary<string, object>();
+#if !NETFX_CORE
+                            IDictionary<string, object> o = new Dictionary<string, object>();
 #else
                             IDictionary<string, object> o = new ExpandoObject();
 #endif
 
-                            foreach (var p in (_object as ObjectInstance).GetOwnProperties())
+                            foreach (var p in ((ObjectInstance) _object).GetOwnProperties())
                             {
                                 if (!p.Value.Enumerable.HasValue || p.Value.Enumerable.Value == false)
                                 {
                                     continue;
                                 }
 
-                                o.Add(p.Key, (_object as ObjectInstance).Get(p.Key).ToObject());
+                                o.Add(p.Key, ((ObjectInstance) _object).Get(p.Key).ToObject());
                             }
 
                             return o;

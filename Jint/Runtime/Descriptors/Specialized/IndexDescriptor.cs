@@ -22,8 +22,9 @@ namespace Jint.Runtime.Descriptors.Specialized
             var indexers = targetType.GetProperties();
 
             // try to find first indexer having either public getter or setter with matching argument type
-            foreach (var indexer in indexers)
+            for (int i = 0, len = indexers.Length; i < len; i++)
             {
+                var indexer = indexers[i];
                 if (indexer.GetIndexParameters().Length != 1) continue;
                 if (indexer.GetGetMethod() != null || indexer.GetSetMethod() != null)
                 {
@@ -33,9 +34,8 @@ namespace Jint.Runtime.Descriptors.Specialized
                     {
                         _indexer = indexer;
                         // get contains key method to avoid index exception being thrown in dictionaries
-                        _containsKey = targetType.GetMethod("ContainsKey", new Type[] { paramType });
+                        _containsKey = targetType.GetMethod("ContainsKey", new Type[] {paramType});
                         break;
-
                     }
                 }
             }

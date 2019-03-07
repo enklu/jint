@@ -13,7 +13,9 @@ namespace Jint.Runtime.Interop
         private readonly Engine _engine;
         private static readonly Dictionary<string, bool> _knownConversions = new Dictionary<string, bool>();
         private static readonly object _lockObject = new object();
-        private readonly Dictionary<Delegate, Delegate> _delegateCache = new Dictionary<Delegate, Delegate>();
+
+        private readonly Dictionary<Delegate, object> _delegateCache = new Dictionary<Delegate, object>();
+        private readonly Dictionary<Type, ICallableConversion> _delegateConversions = new Dictionary<Type, ICallableConversion>();
 
         private static MethodInfo convertChangeType = typeof(System.Convert).GetMethod("ChangeType", new Type[] { typeof(object), typeof(Type), typeof(IFormatProvider) });
         private static MethodInfo jsValueFromObject = typeof(JsValue).GetMethod("FromObject");
@@ -22,6 +24,22 @@ namespace Jint.Runtime.Interop
         public DefaultTypeConverter(Engine engine)
         {
             _engine = engine;
+        }
+
+        /// <summary>
+        /// Registers a conversion operation for a specific target type. When the callable must be adapted to this type,
+        /// use the provided conversion operation.
+        /// </summary>
+        /// <param name="targetType">The <see cref="Type"/> of the object Jint is trying to convert the callable to.</param>
+        /// <param name="conversion">The conversion implementation to use for the specific target type</param>
+        public void RegisterDelegateConversion(Type targetType, ICallableConversion conversion)
+        {
+            if (_delegateConversions.ContainsKey(targetType))
+            {
+                return;
+            }
+
+            _delegateConversions[targetType] = conversion;
         }
 
         public virtual object Convert(object value, Type type, IFormatProvider formatProvider)
@@ -63,6 +81,13 @@ namespace Jint.Runtime.Interop
                 if (_delegateCache.ContainsKey(function))
                 {
                     return _delegateCache[function];
+                }
+
+                // Check for registered callable conversion
+                if (_delegateConversions.ContainsKey(type))
+                {
+                    var converted = _delegateConversions[type].Convert(function);
+                    return Cache(function, converted);
                 }
 
                 if (type.IsGenericType())
@@ -294,10 +319,7 @@ namespace Jint.Runtime.Interop
         /// <summary>
         /// Caches the wrapper for a specific callable.
         /// </summary>
-        /// <param name="callable"></param>
-        /// <param name="target"></param>
-        /// <returns></returns>
-        private Delegate Cache(Func<JsValue, JsValue[], JsValue> callable, Delegate target)
+        private object Cache(Func<JsValue, JsValue[], JsValue> callable, object target)
         {
             _delegateCache[callable] = target;
             return target;

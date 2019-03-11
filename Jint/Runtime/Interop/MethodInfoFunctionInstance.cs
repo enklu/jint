@@ -16,12 +16,14 @@ namespace Jint.Runtime.Interop
     {
         private readonly Engine _engine;
         private readonly MethodInfo[] _methods;
-        
+        private readonly Type _denyInteropAccess;
+
         public MethodInfoFunctionInstance(Engine engine, MethodInfo[] methods)
             : base(engine, null, null, false)
         {
             _engine = engine;
             _methods = methods;
+            _denyInteropAccess = _engine.Options._DenyInteropAccessAttribute;
 
             Prototype = _engine.Function.PrototypeObject;
         }
@@ -50,7 +52,7 @@ namespace Jint.Runtime.Interop
             for (int q = 0, qlen = methods.Count; q < qlen; q++)
             {
                 var method = methods[q];
-                if (method.HasAttribute<DenyJsAccess>())
+                if (null != _denyInteropAccess && method.HasAttribute(_denyInteropAccess))
                 {
                     continue;
                 }
@@ -142,7 +144,7 @@ namespace Jint.Runtime.Interop
             for (int q = 0, qlen = methods.Count; q < qlen; q++)
             {
                 var method = methods[q];
-                if (method.HasAttribute<DenyJsAccess>())
+                if (null != _denyInteropAccess && method.HasAttribute(_denyInteropAccess))
                 {
                     continue;
                 }
@@ -220,7 +222,7 @@ namespace Jint.Runtime.Interop
         }
 
         /// <summary>
-        /// Returns true if any of the parameters has 
+        /// Returns true if any of the parameters has
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="parameters"></param>
@@ -262,7 +264,7 @@ namespace Jint.Runtime.Interop
                 {
                     continue;
                 }
-                
+
                 var nonParamsArgumentsCount = parameters.Length - 1;
                 if (jsArguments.Length < nonParamsArgumentsCount)
                 {

@@ -16,13 +16,14 @@ namespace Jint
         private bool _allowClr;
         private readonly List<IObjectConverter> _objectConverters = new List<IObjectConverter>();
         private int _maxStatements;
-        private int _maxRecursionDepth = -1; 
+        private int _maxRecursionDepth = -1;
         private TimeSpan _timeoutInterval;
         private CultureInfo _culture = CultureInfo.CurrentCulture;
         private TimeZoneInfo _localTimeZone = TimeZoneInfo.Utc;
         private List<Assembly> _lookupAssemblies = new List<Assembly>();
         private Predicate<Exception> _clrExceptionsHandler;
         private IReferenceResolver _referenceResolver;
+        private Type _denyInteropAccessAttribute;
 
         /// <summary>
         /// When called, doesn't initialize the global scope.
@@ -47,7 +48,7 @@ namespace Jint
         /// Allow the <code>debugger</code> statement to be called in a script.
         /// </summary>
         /// <remarks>
-        /// Because the <code>debugger</code> statement can start the 
+        /// Because the <code>debugger</code> statement can start the
         /// Visual Studio debugger, is it disabled by default
         /// </remarks>
         public Options AllowDebuggerStatement(bool allowDebuggerStatement = true)
@@ -86,6 +87,21 @@ namespace Jint
         }
 
         /// <summary>
+        /// Allows interop communication to ignore specific host fields where this <see cref="Attribute"/>
+        /// exists.
+        /// </summary>
+        public Options DenyInteropAccessWith(Type attributeType)
+        {
+            if (!typeof(Attribute).IsAssignableFrom(attributeType))
+            {
+                return this;
+            }
+
+            _denyInteropAccessAttribute = attributeType;
+            return this;
+        }
+
+        /// <summary>
         /// Exceptions thrown from CLR code are converted to JavaScript errors and
         /// can be used in at try/catch statement. By default these exceptions are bubbled
         /// to the CLR host and interrupt the script execution.
@@ -112,7 +128,7 @@ namespace Jint
             _maxStatements = maxStatements;
             return this;
         }
-        
+
         public Options TimeoutInterval(TimeSpan timeoutInterval)
         {
             _timeoutInterval = timeoutInterval;
@@ -175,6 +191,11 @@ namespace Jint
         internal bool _IsClrAllowed
         {
             get { return _allowClr; }
+        }
+
+        internal Type _DenyInteropAccessAttribute
+        {
+            get { return _denyInteropAccessAttribute; }
         }
 
         internal Predicate<Exception> _ClrExceptionsHandler

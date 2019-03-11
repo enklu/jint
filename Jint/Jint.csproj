@@ -1,10 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <NeutralLanguage>en-US</NeutralLanguage>
     <TargetFrameworks>net35;netstandard1.3</TargetFrameworks>
-    <AssemblyOriginatorKeyFile>Jint.snk</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
+    <PackageId>Jint</PackageId>
+    <AssemblyTitle>Jint</AssemblyTitle>
+    <Description>(Enklu Fork) Javascript interpreter for .NET which provides full ECMA 5.1 compliance.</Description>
+    <Version>2.9.1-Enklu</Version>
+    <LicenseUrl>https://opensource.org/licenses/BSD-2-Clause</LicenseUrl>
+    <RepositoryUrl>git@github.com:enklu/jint.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
+    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
+    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
+    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
+    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
+    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>true</GenerateAssemblyFileVersionAttribute>
   </PropertyGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net35' OR '$(TargetFramework)' == 'net40' OR '$(TargetFramework)' == 'net45' OR '$(TargetFramework)' == 'net451' ">
@@ -15,8 +29,8 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.3' ">
-    <PackageReference Include="System.Diagnostics.Contracts" Version="4.3.0" />
-    <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0" />
-    <PackageReference Include="System.Reflection.TypeExtensions" Version="*"/>
+    <PackageReference Include="System.Diagnostics.Contracts" Version="4.3.0"/>
+    <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0"/>
+    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.4.0"/>
   </ItemGroup>
 </Project>

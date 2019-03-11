@@ -67,11 +67,13 @@ namespace Jint
 
         internal JintCallStack CallStack = new JintCallStack();
 
-        public static readonly OptimizedObjectPool<StrictModeScope> PoolStrictMode = 
+        public static readonly OptimizedObjectPool<StrictModeScope> PoolStrictMode =
             new OptimizedObjectPool<StrictModeScope>(12, () => new StrictModeScope());
 
-        private static readonly OptimizedObjectPool<ExecutionContext> _poolExecutionContext = 
+        private static readonly OptimizedObjectPool<ExecutionContext> _poolExecutionContext =
             new OptimizedObjectPool<ExecutionContext>(12, () => new ExecutionContext());
+
+        public Attribute DenyInteropAccessAttribute { get; private set; }
 
         public event Action<Engine> OnDestroy;
 
@@ -141,7 +143,7 @@ namespace Jint
             Error.PrototypeObject.Configure();
 
             // create the global environment http://www.ecma-international.org/ecma-262/5.1/#sec-10.2.3
-            GlobalEnvironment = new LexicalEnvironment(); 
+            GlobalEnvironment = new LexicalEnvironment();
             GlobalEnvironment.Setup(new ObjectEnvironmentRecord(this, Global, false), null);
 
             // create the global execution context http://www.ecma-international.org/ecma-262/5.1/#sec-10.4.1.1
@@ -244,7 +246,7 @@ namespace Jint
             context.LexicalEnvironment = lexicalEnvironment;
             context.VariableEnvironment = variableEnvironment;
             context.ThisBinding = thisBinding;
-        
+
             _executionContexts.Push(context);
 
             return context;
@@ -334,7 +336,7 @@ namespace Jint
 
             var scope = PoolStrictMode.Get();
             scope.Setup(Options._IsStrict || program.Strict);
-            
+
             DeclarationBindingInstantiation(DeclarationBindingType.GlobalCode, program.FunctionDeclarations, program.VariableDeclarations, null, null);
 
             var result = _statements.ExecuteProgram(program);
@@ -570,7 +572,7 @@ namespace Jint
                 {
                     return baseValue;
                 }
-                
+
                 if (reference.HasPrimitiveBase() == false)
                 {
                     var o = TypeConverter.ToObject(this, baseValue);

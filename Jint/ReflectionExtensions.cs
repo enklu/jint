@@ -30,6 +30,16 @@ public static class ReflectionExtensions
         return methodBase.GetCustomAttributes<T>().Any();
     }
 
+    public static bool HasAttribute(this ParameterInfo member, Type attributeType)
+    {
+        return member.GetCustomAttributes(attributeType, true).Any();
+    }
+
+    public static bool HasAttribute(this MethodBase methodBase, Type attributeType)
+    {
+        return methodBase.GetCustomAttributes(attributeType, true).Any();
+    }
+
     public static T[] GetCustomAttributes<T>(this Type @this, bool inherit) where T : Attribute
     {
         return (T[]) @this.GetTypeInfo().GetCustomAttributes(typeof(T), inherit).ToArray();
@@ -69,6 +79,16 @@ public static class ReflectionExtensions
     public static bool HasAttribute<T>(this MethodBase methodBase) where T : Attribute
     {
         return Attribute.IsDefined(methodBase, typeof(T), true);
+    }
+
+    public static bool HasAttribute(this ParameterInfo member, Type attributeType)
+    {
+        return Attribute.IsDefined(member, attributeType);
+    }
+
+    public static bool HasAttribute(this MethodBase methodBase, Type attributeType)
+    {
+        return Attribute.IsDefined(methodBase, attributeType, true);
     }
 
     public static T[] GetCustomAttributes<T>(this Type @this, bool inherit) where T : Attribute

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Threading;
 using Jint.Native.Array;
 using Jint.Native.Boolean;
@@ -378,7 +379,27 @@ namespace Jint.Native
         /// <returns>The underlying CLR value of the <see cref="JsValue"/> instance.</returns>
         public T To<T>()
         {
-            return (T) ToObject();
+            var obj = ToObject();
+            var objInstance = _object as ObjectInstance;
+            if (null != objInstance)
+            {
+                var engine = objInstance.Engine;
+                var converter = engine.ClrTypeConverter;
+
+                return (T) converter.Convert(obj, typeof(T), CultureInfo.InvariantCulture);
+            }
+
+            return (T) obj;
+        }
+
+        /// <summary>
+        /// Converts a <see cref="JsValue"/> to its underlying CLR value.
+        /// </summary>
+        /// <returns>The underlying CLR value of the <see cref="JsValue"/> instance.</returns>
+        public T To<T>(ITypeConverter typeConverter)
+        {
+            var obj = ToObject();
+            return (T)typeConverter.Convert(obj, typeof(T), CultureInfo.InvariantCulture);
         }
 
         /// <summary>

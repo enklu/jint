@@ -158,3 +158,5 @@ Jint.sln.ide/*
 .vs
 project.lock.json
 .build
+Jint/.gradle/
+Jint/Directory.Build.props.no

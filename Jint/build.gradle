@@ -1,5 +1,5 @@
 def csc = System.getenv("CSC") ?: cscPath
-def projName = 'Jint'
+def projName = 'Jint-Enklu'
 def csproj = "${projName}.csproj"
 def nupkg = "bin/Debug/${projName}.nupkg"
 

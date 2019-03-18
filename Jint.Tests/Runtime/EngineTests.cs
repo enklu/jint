@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using Jint.Native;
 using Jint.Native.Number;
 using Jint.Parser;
 using Jint.Parser.Ast;
@@ -882,6 +883,72 @@ namespace Jint.Tests.Runtime
             var foo = obj.Get("foo");
 
             Assert.Throws<ArgumentException>(() => _engine.Invoke(foo, obj, new object[] { }));
+        }
+
+        public class T
+        {
+            public int CallCount { get; set; } = 0;
+            public T()
+            {
+
+            }
+            public void doThing()
+            {
+                CallCount++;
+            }
+        }
+        [Fact]
+        public void GetObjValueTest()
+        {
+            var fn = _engine.Execute(@"
+    (function(module) {
+        const self = this;
+
+self.doThing();
+
+        function enter() {
+            self.doThing();
+        }
+
+        function update()
+        {
+            //console.log('update()');
+        }
+
+        function exit()
+        {
+            //console.log('exit');
+        }
+
+        function msgMissing()
+        {
+            //console.log('msgMissing');
+        }
+
+        if (typeof module !== 'undefined') {
+            module.exports = {
+                enter: enter,
+                update: update,
+                exit: exit,
+                msgMissing: msgMissing
+            };
+        }
+
+    });
+            ")
+                            .GetCompletionValue();
+
+            var newT = new T();
+            var tBind = JsValue.FromObject(_engine, newT);
+
+            _engine.Execute("var mod = { };");
+            var mod = _engine.GetValue("mod");
+
+            _engine.Invoke(fn, tBind, new object[] { mod });
+
+            _engine.Execute("mod.exports.enter()");
+
+            Assert.Equal(2, newT.CallCount);
         }
 
         [Theory]
@@ -1899,7 +1966,7 @@ namespace Jint.Tests.Runtime
 
             Assert.True(val.AsString() == "53.6841659");
         }
-		
+
         [Theory]
         [InlineData("", "escape('')")]
         [InlineData("%u0100%u0101%u0102", "escape('\u0100\u0101\u0102')")]

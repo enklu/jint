@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <TargetFrameworks>net35;netstandard1.3</TargetFrameworks>
-    <PackageId>Jint</PackageId>
-    <AssemblyTitle>Jint</AssemblyTitle>
+    <PackageId>Jint-Enklu</PackageId>
+    <AssemblyTitle>Jint-Enklu</AssemblyTitle>
     <Description>(Enklu Fork) Javascript interpreter for .NET which provides full ECMA 5.1 compliance.</Description>
-    <Version>2.9.1-Enklu</Version>
+    <Version>2.9.1</Version>
     <LicenseUrl>https://opensource.org/licenses/BSD-2-Clause</LicenseUrl>
     <RepositoryUrl>git@github.com:enklu/jint.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

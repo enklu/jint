@@ -130,7 +130,7 @@ namespace Jint.Runtime.Interop
                             jsValueToObject);
 
                         return Cache(function, Expression.Lambda(type, callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
-                        #else
+#else
                         var callExpresion = Expression.Block(
                             Expression.Call(
                                 Expression.Call(Expression.Constant(function.Target),
@@ -140,8 +140,8 @@ namespace Jint.Runtime.Interop
                                 jsValueToObject),
                             Expression.Empty());
 
-                        return Expression.Lambda(callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile();
-                        #endif
+                        return Cache(function, Expression.Lambda(callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
+#endif
                     }
                     else if (genericType.Name.StartsWith("Func"))
                     {

@@ -37,109 +37,8 @@ namespace Jint.Runtime.Interop
         {
             var arguments = ProcessParamsArrays(jsArguments, methodInfos);
             var methods = TypeConverter.FindBestMatch(Engine, methodInfos, arguments).ToList();
-            if (0 == methods.Count)
-            {
-                var argumentList = arguments.ToList();
-                argumentList.Insert(0, JsValue.FromObject(_engine, _engine));
-                arguments = argumentList.ToArray();
-
-                methods = TypeConverter.FindBestMatch(_engine, methodInfos, arguments).ToList();
-            }
-
             var converter = Engine.ClrTypeConverter;
-
-            // try to inject Engine parameter first
-            for (int q = 0, qlen = methods.Count; q < qlen; q++)
-            {
-                var method = methods[q];
-                if (null != _denyInteropAccess && method.HasAttribute(_denyInteropAccess))
-                {
-                    continue;
-                }
-
-                var methodParameters = method.GetParameters();
-                if (methodParameters.Length == 0 || methodParameters.Length != arguments.Length + 1)
-                {
-                    continue;
-                }
-
-                var parameters = new object[arguments.Length + 1];
-                var argumentsMatch = true;
-
-                var parameterType = methodParameters[0].ParameterType;
-                if (parameterType != typeof(Engine))
-                {
-                    continue;
-                }
-
-                parameters[0] = _engine;
-
-                for (var i = 0; i < arguments.Length; i++)
-                {
-                    parameterType = methodParameters[i + 1].ParameterType;
-
-                    if (parameterType == typeof(JsValue))
-                    {
-                        parameters[i + 1] = arguments[i];
-                    }
-                    else if (parameterType == typeof(JsValue[]) && arguments[i].IsArray())
-                    {
-                        // Handle specific case of F(params JsValue[])
-
-                        var arrayInstance = arguments[i].AsArray();
-                        var len = TypeConverter.ToInt32(arrayInstance.Get("length"));
-                        var result = new JsValue[len];
-                        for (var k = 0; k < len; k++)
-                        {
-                            var pk = k.ToString();
-                            result[k] = arrayInstance.HasProperty(pk)
-                                ? arrayInstance.Get(pk)
-                                : JsValue.Undefined;
-                        }
-
-                        parameters[i + 1] = result;
-                    }
-                    else
-                    {
-                        if (!converter.TryConvert(arguments[i].ToObject(), parameterType, CultureInfo.InvariantCulture,
-                            out parameters[i + 1]))
-                        {
-                            argumentsMatch = false;
-                            break;
-                        }
-
-                        var lambdaExpression = parameters[i] as LambdaExpression;
-                        if (lambdaExpression != null)
-                        {
-                            parameters[i + 1] = lambdaExpression.Compile();
-                        }
-                    }
-                }
-
-                if (!argumentsMatch)
-                {
-                    continue;
-                }
-
-                // todo: cache method info
-                try
-                {
-                    return JsValue.FromObject(Engine, method.Invoke(thisObject.ToObject(), parameters.ToArray()));
-                }
-                catch (TargetInvocationException exception)
-                {
-                    var meaningfulException = exception.InnerException ?? exception;
-                    var handler = Engine.Options._ClrExceptionsHandler;
-
-                    if (handler != null && handler(meaningfulException))
-                    {
-                        throw new JavaScriptException(Engine.Error, meaningfulException.Message);
-                    }
-
-                    throw meaningfulException;
-                }
-            }
-
+            
             // check for exact parameter match (no Engine injection)
             for (int q = 0, qlen = methods.Count; q < qlen; q++)
             {
@@ -179,8 +78,7 @@ namespace Jint.Runtime.Interop
                     }
                     else
                     {
-                        if (!converter.TryConvert(arguments[i].ToObject(), parameterType, CultureInfo.InvariantCulture,
-                            out parameters[i]))
+                        if (!converter.TryConvert(arguments[i].ToObject(), parameterType, CultureInfo.InvariantCulture, out parameters[i]))
                         {
                             argumentsMatch = false;
                             break;
@@ -202,7 +100,7 @@ namespace Jint.Runtime.Interop
                 // todo: cache method info
                 try
                 {
-                    return JsValue.FromObject(Engine, method.Invoke(thisObject.ToObject(), parameters.ToArray()));
+                    return JsValue.FromObject(Engine, method.Invoke(thisObject.ToObject(), parameters));
                 }
                 catch (TargetInvocationException exception)
                 {

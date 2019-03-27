@@ -20,6 +20,7 @@ namespace Jint.Runtime.Interop
         private static MethodInfo convertChangeType = typeof(System.Convert).GetMethod("ChangeType", new Type[] { typeof(object), typeof(Type), typeof(IFormatProvider) });
         private static MethodInfo jsValueFromObject = typeof(JsValue).GetMethod("FromObject");
         private static MethodInfo jsValueToObject = typeof(JsValue).GetMethod("ToObject");
+        private static Expression JsUndefExpr = Expression.Constant(JsValue.Undefined, typeof(JsValue));
 
         public DefaultTypeConverter(Engine engine)
         {
@@ -97,154 +98,24 @@ namespace Jint.Runtime.Interop
                     // create the requested Delegate
                     if (genericType.Name.StartsWith("Action"))
                     {
-                        var genericArguments = type.GetGenericArguments();
-
-                        var @params = new ParameterExpression[genericArguments.Count()];
-                        for (var i = 0; i < @params.Count(); i++)
-                        {
-                            @params[i] = Expression.Parameter(genericArguments[i], genericArguments[i].Name + i);
-                        }
-                        var tmpVars = new Expression[@params.Length];
-                        for (var i = 0; i < @params.Count(); i++)
-                        {
-                            var param = @params[i];
-                            if (param.Type.IsValueType())
-                            {
-                                var boxing = Expression.Convert(param, typeof(object));
-                                tmpVars[i] = Expression.Call(null, jsValueFromObject, Expression.Constant(_engine, typeof(Engine)), boxing);
-                            }
-                            else
-                            {
-                                tmpVars[i] = Expression.Call(null, jsValueFromObject, Expression.Constant(_engine, typeof(Engine)), param);
-                            }
-                        }
-                        var @vars = Expression.NewArrayInit(typeof(JsValue), tmpVars);
-
-#if !(NETFX_CORE || NETSTANDARD1_3 || NETSTANDARD2_0)
-                        var callExpresion = Expression.Call(
-                            Expression.Call(
-                                Expression.Constant(function.Target),
-                                function.GetMethodInfo(),
-                                Expression.Constant(JsValue.Undefined, typeof(JsValue)),
-                                @vars),
-                            jsValueToObject);
-
-                        return Cache(function, Expression.Lambda(type, callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
-#else
-                        var callExpresion = Expression.Block(
-                            Expression.Call(
-                                Expression.Call(Expression.Constant(function.Target),
-                                    function.GetMethodInfo(),
-                                    Expression.Constant(JsValue.Undefined, typeof(JsValue)),
-                                    @vars),
-                                jsValueToObject),
-                            Expression.Empty());
-
-                        return Cache(function, Expression.Lambda(callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
-#endif
+                        return ConvertToGenericAction(type, function);
                     }
-                    else if (genericType.Name.StartsWith("Func"))
+
+                    if (genericType.Name.StartsWith("Func"))
                     {
-                        var genericArguments = type.GetGenericArguments();
-                        var returnType = genericArguments.Last();
-
-                        var @params = new ParameterExpression[genericArguments.Count() - 1];
-                        for (var i = 0; i < @params.Count(); i++)
-                        {
-                            @params[i] = Expression.Parameter(genericArguments[i], genericArguments[i].Name + i);
-                        }
-#if !(NETFX_CORE || NETSTANDARD1_3 || NETSTANDARD2_0)
-                        var @vars =
-                            Expression.NewArrayInit(
-                                typeof(JsValue),
-                                @params
-                                    .Select(p => {
-                                        var boxingExpression = Expression.Convert(p, typeof(object));
-                                        return Expression.Call(null, jsValueFromObject, Expression.Constant(_engine, typeof(Engine)), boxingExpression);
-                                    })
-                                    .Cast<Expression>());
-#else
-                        var @vars =
-                            Expression.NewArrayInit(typeof(JsValue),
-                                @params.Select(p =>
-                                {
-                                    var boxingExpression = Expression.Convert(p, typeof(object));
-                                    return Expression.Call(null, jsValueFromObject, Expression.Constant(_engine, typeof(Engine)), boxingExpression);
-                                }));
-#endif
-                        // the final result's type needs to be changed before casting,
-                        // for instance when a function returns a number (double) but C# expects an integer
-
-                        var callExpresion = Expression.Convert(
-                            Expression.Call(null,
-                                convertChangeType,
-                                Expression.Call(
-                                    Expression.Call(Expression.Constant(function.Target),
-                                        function.GetMethodInfo(),
-                                        Expression.Constant(JsValue.Undefined, typeof(JsValue)),
-                                        @vars),
-                                    jsValueToObject),
-                                Expression.Constant(returnType, typeof(Type)),
-                                Expression.Constant(System.Globalization.CultureInfo.InvariantCulture,
-                                    typeof(IFormatProvider))
-                            ),
-                            returnType);
-
-                        return Cache(function, Expression.Lambda(type, callExpresion, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
+                        return ConvertToGenericFunc(type, function);
                     }
                 }
                 else
                 {
                     if (type == typeof(Action))
                     {
-                        return Cache(function, (Action) (() => function(JsValue.Undefined, new JsValue[0])));
+                        return ConvertToAction(function);
                     }
-                    else if (typeof(MulticastDelegate).IsAssignableFrom(type))
+
+                    if (typeof(MulticastDelegate).IsAssignableFrom(type))
                     {
-                        var method = type.GetMethod("Invoke");
-                        var arguments = method.GetParameters();
-
-                        var @params = new ParameterExpression[arguments.Length];
-                        for (var i = 0; i < @params.Count(); i++)
-                        {
-                            @params[i] = Expression.Parameter(arguments[i].ParameterType, arguments[i].Name);
-                        }
-
-                        var @vars = Expression.NewArrayInit(
-                            typeof(JsValue),
-                            @params.Select(p => Expression.Call(null,
-                                typeof(JsValue).GetMethod("FromObject"),
-                                Expression.Constant(_engine, typeof(Engine)),
-                                p)).Cast<Expression>());
-
-#if !(NETFX_CORE || NETSTANDARD1_3 || NETSTANDARD2_0)
-                        var callExpression = Expression.Call(
-                            Expression.Call(Expression.Constant(function.Target),
-                                function.GetMethodInfo(),
-                                Expression.Constant(JsValue.Undefined, typeof(JsValue)),
-                                @vars),
-                            typeof(JsValue).GetMethod("ToObject"));
-
-                        var dynamicExpression = Expression.Invoke(
-                            Expression.Lambda(type, callExpression, new ReadOnlyCollection<ParameterExpression>(@params)),
-                            new ReadOnlyCollection<ParameterExpression>(@params).Cast<Expression>());
-#else
-
-                        var callExpression = Expression.Block(
-                                                Expression.Call(
-                                                    Expression.Call(Expression.Constant(function.Target),
-                                                        function.GetMethodInfo(),
-                                                        Expression.Constant(JsValue.Undefined, typeof(JsValue)),
-                                                        @vars),
-                                                    typeof(JsValue).GetMethod("ToObject")),
-                                                Expression.Empty());
-
-                        var dynamicExpression = Expression.Invoke(
-                            Expression.Lambda(callExpression, new ReadOnlyCollection<ParameterExpression>(@params)),
-                            new ReadOnlyCollection<ParameterExpression>(@params));
-#endif
-
-                        return Cache(function, Expression.Lambda(type, dynamicExpression, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
+                        return ConvertToMulticastDelegate(type, function);
                     }
                 }
 
@@ -270,6 +141,149 @@ namespace Jint.Runtime.Interop
 
             return System.Convert.ChangeType(value, type, formatProvider);
         }
+
+        /// <summary>
+        /// Converts to a basic action delegate.
+        /// </summary>
+        private object ConvertToAction(Func<JsValue, JsValue[], JsValue> function)
+        {
+            return Cache(function, (Action)(() => function(JsValue.Undefined, new JsValue[0])));
+        }
+
+        /// <summary>
+        /// Converts a generic Action delegate
+        /// </summary>
+        private object ConvertToGenericAction(Type type, Func<JsValue, JsValue[], JsValue> function)
+        {
+            var genericArguments = type.GetGenericArguments();
+            var @params = ToParameterExpressions(genericArguments);
+            var @vars = NewParamsArray(@params);
+
+            var callExpression = Expression.Call(
+                Expression.Call(
+                    Expression.Constant(function.Target),
+                    function.GetMethodInfo(),
+                    JsUndefExpr,
+                    @vars),
+                jsValueToObject);
+
+            return Cache(function, Expression.Lambda(type, callExpression, @params).Compile());
+        }
+
+        /// <summary>
+        /// Converts to a generic Func delegate
+        /// </summary>
+        private object ConvertToGenericFunc(Type type, Func<JsValue, JsValue[], JsValue> function)
+        {
+            var genericArguments = type.GetGenericArguments();
+            var returnType = genericArguments[genericArguments.Length - 1];
+
+            Type[] paramArgs = new Type[genericArguments.Length - 1];
+            for (var i = 0; i < paramArgs.Length; ++i)
+            {
+                paramArgs[i] = genericArguments[i];
+            }
+
+            var @params = ToParameterExpressions(paramArgs);
+            var @vars = NewParamsArray(@params);
+            
+            // the final result's type needs to be changed before casting,
+            // for instance when a function returns a number (double) but C# expects an integer
+            var delegateCall = Expression.Call(
+                Expression.Call(
+                    Expression.Constant(function.Target),
+                    function.GetMethodInfo(),
+                    JsUndefExpr,
+                    @vars),
+                jsValueToObject);
+
+            var conversionCall = Expression.Call(
+                convertChangeType,
+                delegateCall,
+                Expression.Constant(returnType, typeof(Type)),
+                Expression.Constant(System.Globalization.CultureInfo.InvariantCulture, typeof(IFormatProvider)));
+
+            var callExpression = Expression.Convert(conversionCall, returnType);
+
+            return Cache(function, Expression.Lambda(type, callExpression, new ReadOnlyCollection<ParameterExpression>(@params)).Compile());
+        }
+
+        /// <summary>
+        /// Converts to a multicast delegate
+        /// </summary>
+        private object ConvertToMulticastDelegate(Type type, Func<JsValue, JsValue[], JsValue> function)
+        {
+            var method = type.GetMethod("Invoke");
+            var arguments = method.GetParameters();
+            var @params = ToParameterExpressions(arguments);
+            var @vars = NewParamsArray(@params);
+
+            var callExpression = Expression.Call(
+                Expression.Call(
+                    Expression.Constant(function.Target),
+                    function.GetMethodInfo(),
+                    JsUndefExpr,
+                    @vars),
+                jsValueToObject);
+
+            var dynamicExpression = Expression.Invoke(
+                Expression.Lambda(type, callExpression, @params),
+                @params.Cast<Expression>());
+
+            return Cache(function, Expression.Lambda(type, dynamicExpression, @params).Compile());
+        }
+
+        /// <summary>
+        /// Converts types to parameter expressions.
+        /// </summary>
+        private ParameterExpression[] ToParameterExpressions(Type[] arguments)
+        {
+            var @params = new ParameterExpression[arguments.Length];
+            for (var i = 0; i < @params.Length; i++)
+            {
+                @params[i] = Expression.Parameter(arguments[i], arguments[i].Name + i);
+            }
+
+            return @params;
+        }
+
+        /// <summary>
+        /// Converts parameter info to parameter expressions.
+        /// </summary>
+        private ParameterExpression[] ToParameterExpressions(ParameterInfo[] arguments)
+        {
+            var @params = new ParameterExpression[arguments.Length];
+            for (var i = 0; i < @params.Length; i++)
+            {
+                @params[i] = Expression.Parameter(arguments[i].ParameterType, arguments[i].Name + i);
+            }
+
+            return @params;
+        }
+
+        /// <summary>
+        /// Converts parameter expressions into an array expression.
+        /// </summary>
+        private NewArrayExpression NewParamsArray(ParameterExpression[] @params)
+        {
+            var tmpVars = new Expression[@params.Length];
+            for (var i = 0; i < @params.Length; i++)
+            {
+                var param = @params[i];
+                if (param.Type.IsValueType())
+                {
+                    var boxing = Expression.Convert(param, typeof(object));
+                    tmpVars[i] = Expression.Call(jsValueFromObject, Expression.Constant(_engine, typeof(Engine)), boxing);
+                }
+                else
+                {
+                    tmpVars[i] = Expression.Call(jsValueFromObject, Expression.Constant(_engine, typeof(Engine)), param);
+                }
+            }
+
+            return Expression.NewArrayInit(typeof(JsValue), tmpVars);
+        }
+
 
         public virtual bool TryConvert(object value, Type type, IFormatProvider formatProvider, out object converted)
         {

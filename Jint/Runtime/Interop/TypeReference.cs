@@ -199,7 +199,7 @@ namespace Jint.Runtime.Interop
                 return PropertyDescriptor.Undefined;
             }
 
-            return new PropertyDescriptor(new MethodInfoFunctionInstance(Engine, methodInfo), false, false, false);
+            return new PropertyDescriptor(new MethodInfoFunctionInstance(Engine, propertyName, methodInfo), false, false, false);
         }
 
         public object Target

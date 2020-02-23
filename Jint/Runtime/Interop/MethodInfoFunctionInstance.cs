@@ -15,13 +15,15 @@ namespace Jint.Runtime.Interop
     public sealed class MethodInfoFunctionInstance : FunctionInstance
     {
         private readonly Engine _engine;
+        private readonly string _methodName;
         private readonly MethodInfo[] _methods;
         private readonly Type _denyInteropAccess;
 
-        public MethodInfoFunctionInstance(Engine engine, MethodInfo[] methods)
+        public MethodInfoFunctionInstance(Engine engine, string methodName, MethodInfo[] methods)
             : base(engine, null, null, false)
         {
             _engine = engine;
+            _methodName = methodName;
             _methods = methods;
             _denyInteropAccess = _engine.Options._DenyInteropAccessAttribute;
 
@@ -116,7 +118,14 @@ namespace Jint.Runtime.Interop
                 }
             }
 
-            throw new JavaScriptException(Engine.TypeError, "No public methods with the specified arguments were found.");
+            var errStr = $"{_methodName}(";
+            for (var i = 0; i < arguments.Length; i++)
+            {
+                errStr += $"{arguments[i].Type}, ";
+            }
+            errStr = errStr.Substring(0, errStr.Length - 2) + ")";
+            
+            throw new JavaScriptException(Engine.TypeError, $"No method was found for: {errStr}");
         }
 
         /// <summary>

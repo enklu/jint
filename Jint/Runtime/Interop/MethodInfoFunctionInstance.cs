@@ -119,11 +119,15 @@ namespace Jint.Runtime.Interop
             }
 
             var errStr = $"{_methodName}(";
-            for (var i = 0; i < arguments.Length; i++)
+            if (arguments.Length > 0)
             {
-                errStr += $"{arguments[i].Type}, ";
+                for (var i = 0; i < arguments.Length; i++)
+                {
+                    errStr += $"{arguments[i].Type}, ";
+                }
+                errStr = errStr.Substring(0, errStr.Length - 2);
             }
-            errStr = errStr.Substring(0, errStr.Length - 2) + ")";
+            errStr += ")";
             
             throw new JavaScriptException(Engine.TypeError, $"No method was found for: {errStr}");
         }

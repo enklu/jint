@@ -87,7 +87,7 @@ namespace Jint.Runtime.Interop
 
             if (methods.Any())
             {
-                var descriptor = new PropertyDescriptor(new MethodInfoFunctionInstance(Engine, methods), false, true, false);
+                var descriptor = new PropertyDescriptor(new MethodInfoFunctionInstance(Engine, propertyName, methods), false, true, false);
                 Properties.Add(propertyName, descriptor);
                 return descriptor;
             }
@@ -121,7 +121,7 @@ namespace Jint.Runtime.Interop
 
             if (explicitMethods.Length > 0)
             {
-                var descriptor = new PropertyDescriptor(new MethodInfoFunctionInstance(Engine, explicitMethods), false, true, false);
+                var descriptor = new PropertyDescriptor(new MethodInfoFunctionInstance(Engine, propertyName, explicitMethods), false, true, false);
                 Properties.Add(propertyName, descriptor);
                 return descriptor;
             }
